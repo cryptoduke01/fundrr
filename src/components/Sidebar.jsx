@@ -1,176 +1,69 @@
-import React, { useState } from 'react';
-import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
-  ArrowDownToLine,
-  TrendingUp,
-  CreditCard,
-  Calculator,
-  Settings,
-  CreditCardIcon as PaymentIcon,
+  Home,
+  PlusCircle,
+  Search,
+  FolderOpen,
   User,
-  Plus,
-  Menu,
-  X
-} from "lucide-react";
+  Settings,
+  LogOut
+} from 'lucide-react';
 
-export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+const Sidebar = () => {
+  const location = useLocation();
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const sidebarItems = [
-    { icon: LayoutDashboard, label: "Home", path: "#" },  // General overview
-    { icon: PaymentIcon, label: "Discover Campaigns", path: "#" },  // Explore other fundraising campaigns
-    { icon: Plus, label: "Create Campaign", path: "#" },  // Start a new fundraising campaign
-    { icon: TrendingUp, label: "My Campaigns", path: "#" },  // View and manage your campaigns
-    { icon: ArrowDownToLine, label: "Withdraw Funds", path: "#" },  // Withdraw raised funds
-    { icon: CreditCard, label: "Contributions", path: "#" },  // Track your donations to campaigns
-    { icon: User, label: "Profile", path: "#" },  // User account settings
-    { icon: Settings, label: "Settings", path: "#" }  // App preferences
+  const menuItems = [
+    { path: '/', icon: Home, label: 'Dashboard' },
+    { path: '/create', icon: PlusCircle, label: 'Create Campaign' },
+    { path: '/discover', icon: Search, label: 'Discover' },
+    { path: '/my-campaigns', icon: FolderOpen, label: 'My Campaigns' },
+    { path: '/profile', icon: User, label: 'Profile' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
   ];
-  
+
   return (
-    <>
-      {/* Mobile Menu Toggle */}
-      <motion.button 
-        onClick={toggleSidebar} 
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="fixed top-4 left-4 z-50 md:hidden bg-purple-600 p-2 rounded-full text-white"
-      >
-        {isOpen ? <X /> : <Menu />}
-      </motion.button>
-
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-40 
-        w-64 
-        bg-gradient-to-br from-black/80 to-slate-900/80
-        text-white 
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:relative
-        flex flex-col
-        border-r border-slate-800
-        overflow-y-auto
-        shadow-2xl
-      `}>
-        {/* Logo Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="p-6 border-b border-slate-800 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center">
-              <span className="text-black font-bold text-lg">F</span>
-            </div>
-            <span className="text-xl font-semibold">fundrr</span>
+    <div className="w-64 bg-[#0A0F1C] border-r border-gray-800 min-h-screen">
+      <div className="p-6">
+        <div className="flex items-center space-x-2 mb-8">
+          <div className="w-8 h-8 bg-[#7C3AED] rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold">F</span>
           </div>
-        </motion.div>
+          <span className="text-xl font-bold text-white">Fundrr</span>
+        </div>
 
-        {/* Navigation Items */}
-        <nav className="flex-grow p-4 space-y-1">
-          {sidebarItems.map((item, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ 
-                delay: index * 0.05,
-                duration: 0.3 
-              }}
-            >
-              <Link 
-                to={item.path} 
-                className="
-                  flex items-center gap-3 
-                  px-4 py-3 
-                  rounded-lg 
-                  hover:bg-purple-600/20 
-                  transition-colors 
-                  group
-                "
+        <nav className="space-y-2">
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                    ? 'bg-[#1E293B] text-white'
+                    : 'text-gray-400 hover:bg-[#1E293B] hover:text-white'
+                  }`}
               >
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <item.icon 
-                    className="
-                      w-5 h-5 
-                      text-slate-400 
-                      group-hover:text-purple-500 
-                      transition-colors
-                    " 
-                  />
-                </motion.div>
-                <span className="
-                  text-slate-300 
-                  group-hover:text-white 
-                  transition-colors
-                ">
-                  {item.label}
-                </span>
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
               </Link>
-            </motion.div>
-          ))}
+            );
+          })}
         </nav>
 
-        {/* User Profile Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="
-            p-4 
-            border-t border-slate-800 
-            flex items-center 
-            gap-3
-          "
-        >
-          <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="
-              h-12 w-12 
-              rounded-full 
-              bg-purple-600/20 
-              border-2 border-purple-600 
-              flex items-center 
-              justify-center
-            "
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-[#1E293B] hover:text-white transition-colors w-full"
           >
-            <span className="text-white font-semibold">DL</span>
-          </motion.div>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-white">Daniel Lewis</span>
-          </div>
-        </motion.div>
+            <LogOut className="w-5 h-5" />
+            <span>Disconnect</span>
+          </button>
+        </div>
       </div>
-
-      {/* Overlay for mobile when sidebar is open */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={toggleSidebar} 
-            className="
-              fixed inset-0 
-              bg-black/50 
-              z-30 
-              md:hidden
-            "
-          />
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   );
-}
+};
+
+export default Sidebar;

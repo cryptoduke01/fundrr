@@ -1,56 +1,32 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Plus } from "lucide-react";
-import AuthButton from "./AuthButton";
-import { useUser } from '@civic/auth-web3/react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useNavigate } from 'react-router-dom';
 
+const Header = () => {
+  const { publicKey } = useWallet();
+  const navigate = useNavigate();
 
-export function Header() {
-  const userContext = useUser();
-  const { user } = userContext;
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="flex items-center justify-between mb-8"
-    >
-    <AuthButton />
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Welcome, {user.name}!</h1>
+    <header className="bg-[#0A0F1C] border-b border-gray-800">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            <div
+              className="cursor-pointer flex items-center gap-2"
+              onClick={() => navigate('/')}
+            >
+              <div className="w-8 h-8 bg-[#7C3AED] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold">F</span>
+              </div>
+              <h1 className="text-xl font-bold text-white">Fundrr</h1>
+            </div>
+          </div>
+          <WalletMultiButton className="!bg-[#1E293B] hover:!bg-[#2D3748] !text-white" />
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="
-            h-10 w-10 
-            rounded-full 
-            bg-[#1E2330] 
-            border border-slate-700 
-            text-white 
-            flex items-center 
-            justify-center
-          "
-        >
-          <Plus className="h-5 w-5" />
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="
-            px-4 py-2 
-            bg-blue-600 
-            hover:bg-blue-700 
-            text-white 
-            rounded-full 
-            font-medium 
-            transition-colors
-          "
-        >
-          Donate
-        </motion.button>
-      </div>
-    </motion.div>
+    </header>
   );
-}
+};
+
+export default Header;
