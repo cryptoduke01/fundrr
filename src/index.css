@@ -1,0 +1,73 @@
+@import url('https://fonts.cdnfonts.com/css/dm-sans');
+@import "tailwindcss";
+
+/* Define CSS Variables (Replace Tailwind Config) */
+:root {
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 220 13% 91%;
+  --background: 220 13% 91%;
+  --foreground: 220 13% 21%;
+
+  --primary: 240 100% 50%;
+  --primary-foreground: 240 100% 90%;
+
+  --secondary: 270 50% 40%;
+  --secondary-foreground: 270 50% 80%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 84% 90%;
+
+  --muted: 240 13% 15%;
+  --muted-foreground: 240 13% 40%;
+
+  --accent: 180 50% 50%;
+  --accent-foreground: 180 50% 90%;
+
+  --popover: 220 10% 10%;
+  --popover-foreground: 220 10% 90%;
+
+  --card: 220 10% 15%;
+  --card-foreground: 220 10% 90%;
+
+  /* Sidebar Colors */
+  --sidebar-background: 220 10% 10%;
+  --sidebar-foreground: 220 10% 90%;
+  --sidebar-primary: 240 100% 40%;
+  --sidebar-primary-foreground: 240 100% 90%;
+  --sidebar-accent: 280 50% 50%;
+  --sidebar-accent-foreground: 280 50% 90%;
+  --sidebar-border: 220 13% 20%;
+  --sidebar-ring: 220 13% 30%;
+
+  --radius: 8px;
+}
+
+/* Dark Mode */
+.dark {
+  --background: 220 13% 15%;
+  --foreground: 220 13% 90%;
+}
+
+/* Border radius */
+.rounded-lg { border-radius: var(--radius); }
+.rounded-md { border-radius: calc(var(--radius) - 2px); }
+.rounded-sm { border-radius: calc(var(--radius) - 4px); }
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+.animate-accordion-down { animation: accordion-down 0.2s ease-out; }
+.animate-accordion-up { animation: accordion-up 0.2s ease-out; }
+
+
+* {
+  font-family: 'DM Sans', sans-serif;  
+}
