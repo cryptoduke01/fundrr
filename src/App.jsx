@@ -1,10 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useAnchorProgram } from './hooks/useAnchorProgram';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { useWalletContext } from './contexts/WalletContext';
+import { Routes, Route } from 'react-router-dom';
+import dynamic from 'next/dynamic';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -20,18 +15,16 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import CustomWalletButton from './components/CustomWalletButton';
 
-// Import styles
-import '@solana/wallet-adapter-react-ui/styles.css';
+// Dynamically import wallet components
+const WalletConnectionProvider = dynamic(
+  () => import('./contexts/WalletConnectionProvider'),
+  { ssr: false }
+);
 
 function App() {
-  const { publicKey, connected } = useWallet();
-  const { setWalletModalOpen } = useWalletModal();
-  const { setWalletModalVisible } = useWalletContext();
-  const program = useAnchorProgram();
-
   return (
-    <div className="min-h-screen bg-[#0A0F1C] text-white">
-      {connected ? (
+    <WalletConnectionProvider>
+      <div className="min-h-screen bg-[#0A0F1C] text-white">
         <div className="flex h-screen">
           <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -49,15 +42,8 @@ function App() {
             </main>
           </div>
         </div>
-      ) : (
-        <div className="min-h-screen flex items-center justify-center bg-[#0A0F1C]">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold mb-8">Welcome to Fundrr</h1>
-            <CustomWalletButton />
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </WalletConnectionProvider>
   );
 }
 
