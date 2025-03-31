@@ -79,30 +79,30 @@ export function SummaryCards() {
     <motion.div
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"
+      className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto"
     >
-      <div className="grid gap-6">
+      <div className="grid gap-4 sm:gap-6">
         <motion.div
           variants={cardVariants}
-          className="rounded-2xl bg-gradient-to-br from-black/80 to-slate-900/80 p-6 border border-slate-800 shadow-2xl"
+          className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-black/90 to-slate-900/90 p-4 sm:p-6 border border-slate-800 shadow-2xl backdrop-blur-sm"
         >
-          <div className="mb-2 text-sm text-slate-400">Total Funds Raised</div>
+          <div className="mb-2 text-sm font-medium text-slate-400">Total Funds Raised</div>
           <div className="flex items-end justify-between">
             <div>
-              <div className="flex items-baseline">
+              <div className="flex items-baseline flex-wrap gap-1">
                 <motion.span
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="text-3xl font-bold text-white"
+                  className="text-2xl sm:text-3xl font-bold text-white"
                 >
                   {balance.toFixed(2)}
                 </motion.span>
-                <span className="text-xl text-slate-400 flex items-center">
+                <span className="text-lg sm:text-xl text-slate-400 flex items-center">
                   <SolanaIcon />
                 </span>
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-400 mt-1">
                 ≈ ${(balance * solPrice).toFixed(2)} USD
               </div>
             </div>
@@ -110,9 +110,9 @@ export function SummaryCards() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300 }}
-              className="flex items-center gap-2"
+              className="flex items-center"
             >
-              <div className="rounded-full bg-purple-500/20 px-2 py-1 text-xs font-medium text-purple-500">
+              <div className="rounded-full bg-purple-500/20 px-2.5 py-1 text-xs font-medium text-purple-500">
                 3 Active
               </div>
             </motion.div>
@@ -121,25 +121,25 @@ export function SummaryCards() {
 
         <motion.div
           variants={cardVariants}
-          className="rounded-2xl bg-gradient-to-br from-black/80 to-slate-900/80 p-6 border border-slate-800 shadow-2xl"
+          className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-black/90 to-slate-900/90 p-4 sm:p-6 border border-slate-800 shadow-2xl backdrop-blur-sm"
         >
-          <div className="mb-2 text-sm text-slate-400">Your Contributions</div>
+          <div className="mb-2 text-sm font-medium text-slate-400">Your Contributions</div>
           <div className="flex items-end justify-between">
             <div>
-              <div className="flex items-baseline">
+              <div className="flex items-baseline flex-wrap gap-1">
                 <motion.span
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="text-3xl font-bold text-white"
+                  className="text-2xl sm:text-3xl font-bold text-white"
                 >
                   {(balance / 2).toFixed(2)}
                 </motion.span>
-                <span className="text-xl text-slate-400 flex items-center">
+                <span className="text-lg sm:text-xl text-slate-400 flex items-center">
                   <SolanaIcon />
                 </span>
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-400 mt-1">
                 ≈ ${((balance / 2) * solPrice).toFixed(2)} USD
               </div>
             </div>
@@ -163,37 +163,37 @@ export function SummaryCards() {
 
       <motion.div
         variants={cardVariants}
-        className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-black/80 p-6 flex flex-col shadow-2xl"
+        className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-black/90 to-slate-900/90 p-4 sm:p-6 border border-slate-800 shadow-2xl backdrop-blur-sm flex flex-col"
       >
         <div className="flex flex-col items-center justify-center space-y-2">
-          <div className="text-sm text-slate-400">Charity Fund Status</div>
-          <div className="flex items-baseline">
+          <div className="text-sm font-medium text-slate-400">Charity Fund Status</div>
+          <div className="flex items-baseline flex-wrap gap-1 justify-center">
             <motion.span
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-3xl font-bold text-white"
+              className="text-2xl sm:text-3xl font-bold text-white"
             >
               {(balance / 2).toFixed(2)}
             </motion.span>
-            <span className="text-xl text-slate-400 flex items-center">
+            <span className="text-lg sm:text-xl text-slate-400 flex items-center">
               <SolanaIcon />
             </span>
           </div>
-          <div className="text-sm text-slate-400">
+          <div className="text-xs sm:text-sm text-slate-400 mt-1">
             ≈ ${((balance / 2) * solPrice).toFixed(2)} USD
           </div>
-          <div className="text-sm text-slate-400">
+          <div className="text-xs sm:text-sm text-slate-400">
             Total Impact Made
           </div>
         </div>
 
-        <div className="mt-auto">
+        <div className="mt-auto pt-4 sm:pt-6">
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <Button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 transition-all duration-300 ease-in-out">
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base py-2.5 sm:py-3 font-medium">
               Create Campaign
             </Button>
           </motion.div>

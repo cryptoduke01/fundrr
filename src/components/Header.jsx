@@ -17,9 +17,9 @@ const Header = () => {
               onClick={() => navigate('/')}
             >
               <div className="w-8 h-8 bg-[#7C3AED] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">F</span>
+                <span className="text-white font-bold">f</span>
               </div>
-              <h1 className="text-xl font-bold text-white">Fundrr</h1>
+              <h1 className="text-xl font-bold text-white">fundrr</h1>
             </div>
           </div>
           <WalletMultiButton className="!bg-[#1E293B] hover:!bg-[#2D3748] !text-white" />

@@ -42,7 +42,7 @@ function App() {
                 <Route path="/create" element={<CreateCampaign />} />
                 <Route path="/campaign/:id" element={<CampaignDetails />} />
                 <Route path="/discover" element={<DiscoverCampaigns />} />
-                <Route path="/my-campaigns" element={<MyCampaigns />} />
+                <Route path="/campaigns" element={<MyCampaigns />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>

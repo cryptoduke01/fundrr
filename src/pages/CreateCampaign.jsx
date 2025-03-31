@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ImagePlus, Calendar, Target, FileText, Tags, Info } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 // import Header from '../components/Header';
@@ -20,7 +23,7 @@ const CAMPAIGN_CATEGORIES = [
   { value: 'other', label: 'Other' }
 ];
 
-const CreateCampaign = () => {
+export function CreateCampaign() {
   const { publicKey, connected } = useWallet();
   const navigate = useNavigate();
   const program = useAnchorProgram();
@@ -28,10 +31,9 @@ const CreateCampaign = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    goalAmount: '',
-    currency: 'SOL', // Default to SOL
-    duration: 30, // Default to 30 days
     category: '',
+    goal: '',
+    endDate: '',
     image: null
   });
 
@@ -41,15 +43,53 @@ const CreateCampaign = () => {
     return null;
   }
 
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
 
-    // Update preview
-    setFormData(prev => ({
-      ...prev,
-      image: file
-    }));
+    setIsSubmitting(true);
+    const loadingToast = toast.loading('Creating campaign...');
+
+    try {
+      // Upload image and metadata to IPFS
+      const metadataUrl = await uploadToIPFS(formData.image, {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category
+      });
+
+      // Create campaign
+      const campaignService = new CampaignService(program, publicKey);
+      const campaignAddress = await campaignService.createCampaign(
+        formData.title,
+        metadataUrl,
+        parseFloat(formData.goal),
+        parseInt(formData.endDate),
+        'SOL',
+        formData.category
+      );
+
+      toast.success('Campaign created successfully!', {
+        id: loadingToast,
+      });
+
+      // Navigate to the campaign details page
+      navigate(`/campaign/${campaignAddress.toString()}`);
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      toast.error('Failed to create campaign: ' + error.message, {
+        id: loadingToast,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, image: file }));
+    }
   };
 
   const uploadToIPFS = async (file, metadata) => {
@@ -103,230 +143,157 @@ const CreateCampaign = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-    const loadingToast = toast.loading('Creating campaign...');
-
-    try {
-      // Upload image and metadata to IPFS
-      const metadataUrl = await uploadToIPFS(formData.image, {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category
-      });
-
-      // Create campaign
-      const campaignService = new CampaignService(program, publicKey);
-      const campaignAddress = await campaignService.createCampaign(
-        formData.title,
-        metadataUrl,
-        parseFloat(formData.goalAmount),
-        parseInt(formData.duration),
-        formData.currency,
-        formData.category
-      );
-
-      toast.success('Campaign created successfully!', {
-        id: loadingToast,
-      });
-
-      // Navigate to the campaign details page
-      navigate(`/campaign/${campaignAddress.toString()}`);
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-      toast.error('Failed to create campaign: ' + error.message, {
-        id: loadingToast,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className="flex-1">
-      {/* <Header /> */}
-      <div className="max-w-4xl mx-auto mt-8 p-6">
-        <h1 className="text-3xl font-bold text-white mb-8">Create Campaign</h1>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Campaign Title
-            </label>
+    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-[1000px] mx-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-8"
+      >
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+            Create Campaign
+          </h1>
+          <p className="mt-2 text-slate-400">
+            Launch your crowdfunding campaign and start making an impact
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Campaign Image Upload */}
+          <div className="relative group">
             <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-              placeholder="Enter campaign title"
-              required
-              maxLength={50}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+              id="campaign-image"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Campaign Category
-            </label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-              required
+            <label
+              htmlFor="campaign-image"
+              className="block aspect-video rounded-2xl bg-slate-800/50 border-2 border-dashed border-slate-700 hover:border-purple-500/50 transition-colors cursor-pointer overflow-hidden"
             >
-              <option value="">Select a category</option>
-              {CAMPAIGN_CATEGORIES.map(category => (
-                <option key={category.value} value={category.value}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Description
+              {formData.image ? (
+                <img
+                  src={URL.createObjectURL(formData.image)}
+                  alt="Campaign preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                  <ImagePlus className="w-8 h-8 mb-3" />
+                  <p className="text-sm font-medium">Upload campaign image</p>
+                  <p className="text-xs mt-1">Recommended: 1920x1080px</p>
+                </div>
+              )}
             </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500 h-32"
-              placeholder="Enter campaign description"
-              required
-              rows={4}
-              maxLength={500}
-            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Funding Goal (SOL)
-              </label>
-              <input
-                type="number"
-                name="goalAmount"
-                value={formData.goalAmount}
-                onChange={(e) => setFormData(prev => ({ ...prev, goalAmount: e.target.value }))}
-                className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-l-lg text-white focus:outline-none focus:border-purple-500"
-                placeholder="Enter funding goal"
-                min="0.1"
-                step="0.1"
-                required
-              />
+          {/* Campaign Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <FileText className="w-4 h-4" />
+                  Campaign Title
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter campaign title"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <Info className="w-4 h-4" />
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe your campaign"
+                  rows={4}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Campaign Duration (days)
-              </label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                required
-                min="1"
-                max="365"
-                placeholder="Enter campaign duration in days"
-              />
-            </div>
-          </div>
+            <div className="space-y-6">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <Tags className="w-4 h-4" />
+                  Category
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                >
+                  <option value="" disabled>Select category</option>
+                  {CAMPAIGN_CATEGORIES.map(category => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Campaign Image
-            </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-lg hover:border-purple-500 transition-colors">
-              <div className="space-y-1 text-center">
-                {formData.image ? (
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(formData.image)}
-                      alt="Campaign preview"
-                      className="mx-auto h-32 w-auto rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-400">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer rounded-md font-medium text-purple-500 hover:text-purple-400"
-                      >
-                        <span>Upload a file</span>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
-                  </>
-                )}
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <Target className="w-4 h-4" />
+                  Funding Goal (SOL)
+                </label>
+                <input
+                  type="number"
+                  value={formData.goal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, goal: e.target.value }))}
+                  placeholder="Enter funding goal"
+                  min="0"
+                  step="0.1"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-white mb-2">
+                  <Calendar className="w-4 h-4" />
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                />
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-4 mt-6">
-            <h3 className="text-lg font-medium text-white mb-2">Transaction Summary</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Network</span>
-                <span className="text-white">Solana Devnet</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Estimated Gas Fee</span>
-                <span className="text-white">~0.000005 SOL</span>
-              </div>
-            </div>
+          <div className="flex gap-4 pt-6">
+            <Button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="px-6 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors"
+              style={{ cursor: 'pointer' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="px-6 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-medium transition-colors"
+              style={{ cursor: 'pointer' }}
+            >
+              Create Campaign
+            </Button>
           </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
-          </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
-};
+}
 
 export default CreateCampaign; 
