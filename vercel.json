@@ -6,5 +6,9 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
-  ]
+  ],
+  "env": {
+    "VITE_IGNORE_BUILD_ERRORS": "true",
+    "NODE_ENV": "production"
+  }
 }

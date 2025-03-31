@@ -1,33 +1,48 @@
-import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+import { NodeModulesPolyfillPlugin } from '@esbuild-plugins/node-modules-polyfill'
+import rollupNodePolyFill from 'rollup-plugin-node-polyfills'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
-  },
-  define: {
-    'process.env': {},
-    global: {},
+      process: 'process/browser',
+      stream: 'stream-browserify',
+      zlib: 'browserify-zlib',
+      util: 'util',
+      '@solana/web3.js': '@solana/web3.js/lib/index.browser.cjs.js',
+    }
   },
   optimizeDeps: {
     esbuildOptions: {
       define: {
         global: 'globalThis'
-      }
+      },
+      plugins: [
+        NodeGlobalsPolyfillPlugin({
+          buffer: true,
+          process: true
+        }),
+        NodeModulesPolyfillPlugin()
+      ]
     }
   },
   build: {
-    commonjsOptions: {
-      include: [/node_modules/],
-    },
     rollupOptions: {
+      plugins: [rollupNodePolyFill()],
       external: ['@solana/web3.js'],
     },
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
   },
+  define: {
+    'process.env': {},
+    'global': {}
+  }
 })
