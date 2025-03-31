@@ -13,16 +13,39 @@ if (typeof process === 'undefined') {
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
 import App from './App';
 import './index.css';
 
-// Using devnet for development
-const RPC_ENDPOINT = "https://api.devnet.solana.com";
+// Import wallet styles
+import '@solana/wallet-adapter-react-ui/styles.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>,
-);
+const Main = () => {
+  // Can be set to 'devnet', 'testnet', or 'mainnet-beta'
+  const network = 'devnet';
+  const endpoint = clusterApiUrl(network);
+
+  const wallets = [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+  ];
+
+  return (
+    <React.StrictMode>
+      <ConnectionProvider endpoint={endpoint}>
+        <WalletProvider wallets={wallets} autoConnect>
+          <WalletModalProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </WalletModalProvider>
+        </WalletProvider>
+      </ConnectionProvider>
+    </React.StrictMode>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Main />);
