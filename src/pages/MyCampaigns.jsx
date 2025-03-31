@@ -65,6 +65,66 @@ const MyCampaigns = () => {
     }
   };
 
+  const CampaignCard = ({ campaign }) => {
+    const navigate = useNavigate();
+    const daysLeft = Math.ceil((new Date(campaign.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+
+    return (
+      <div
+        className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer transform hover:scale-[1.02] transition-transform"
+        onClick={() => navigate(`/campaign/${campaign.id}`)}
+      >
+        {/* Campaign Image */}
+        <div className="h-48 bg-gray-700 flex items-center justify-center">
+          {campaign.imageUrl ? (
+            <img
+              src={campaign.imageUrl}
+              alt={campaign.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          )}
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-white truncate">{campaign.title}</h3>
+            <span className="px-2 py-1 bg-purple-600/20 text-purple-400 rounded-full text-xs">
+              {campaign.category}
+            </span>
+          </div>
+
+          <p className="text-gray-400 text-sm line-clamp-2 mb-4">{campaign.description}</p>
+
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-gray-400 mb-1">
+              <span>Progress ({((campaign.amountRaised / campaign.goalAmount) * 100).toFixed(1)}%)</span>
+              <span>{campaign.amountRaised} / {campaign.goalAmount} {campaign.currency}</span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-purple-600 h-2 rounded-full"
+                style={{ width: `${Math.min(100, (campaign.amountRaised / campaign.goalAmount) * 100)}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <div className="text-gray-400">
+              {daysLeft > 0 ? `${daysLeft} days left` : 'Ended'}
+            </div>
+            <div className={`px-2 py-1 rounded text-xs ${campaign.isActive ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
+              {campaign.isActive ? 'Active' : 'Inactive'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex-1">
       {/* <Header /> */}
@@ -98,63 +158,7 @@ const MyCampaigns = () => {
         ) : (
           <div className="flex flex-col gap-4">
             {campaigns.map((campaign) => (
-              <div
-                key={campaign.publicKey.toString()}
-                className="bg-white rounded-lg shadow-md p-6"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{campaign.title}</h3>
-                    <p className="text-gray-600 mb-4">{campaign.description}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Goal</p>
-                    <p className="font-semibold">{campaign.goalAmount.toFixed(2)} SOL</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Raised</p>
-                    <p className="font-semibold">{campaign.amountRaised.toFixed(2)} SOL</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Deadline</p>
-                    <p className="font-semibold">
-                      {new Date(campaign.deadline).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{
-                        width: `${Math.min(
-                          (campaign.amountRaised / campaign.goalAmount) * 100,
-                          100
-                        )}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-4">
-                  <button
-                    onClick={() => navigate(`/campaign/${campaign.publicKey.toString()}`)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                  >
-                    View Details
-                  </button>
-                  {campaign.isActive && (
-                    <button
-                      onClick={() => handleWithdraw(campaign.publicKey)}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                      disabled={loading}
-                    >
-                      {loading ? 'Processing...' : 'Withdraw Funds'}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <CampaignCard key={campaign.publicKey.toString()} campaign={campaign} />
             ))}
           </div>
         )}

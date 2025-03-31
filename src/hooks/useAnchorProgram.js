@@ -4,7 +4,7 @@ import { Program, AnchorProvider } from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 import idl from '../idl/fundrr.json';
 
-const programID = new PublicKey('Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS');
+const programID = new PublicKey('GAQ7YMvLb3wxMbTHX5cpUQM5wk5m4h9LG4RakBqJjR5P');
 
 export const useAnchorProgram = () => {
   const { connection } = useConnection();

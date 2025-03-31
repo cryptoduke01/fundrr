@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { CampaignService } from '../services/campaign';
 import { useAnchorProgram } from '../hooks/useAnchorProgram';
 import { useNavigate } from 'react-router-dom';
+import solanaLogoMark from '../assets/solanaLogoMark.png';
 
 const Dashboard = () => {
   const { connection } = useConnection();
@@ -186,9 +187,9 @@ const Dashboard = () => {
               )}
               <div className="flex items-center gap-2">
                 <img
-                  src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTM3LjQ0IDI4LjMxYTEuMjEgMS4yMSAwIDAgMC0xLjIyLTEuMjJoLTMuMjJhNy4yMyA3LjIzIDAgMCAwLTcuMjMgNy4yM3YzLjIyYTEuMjEgMS4yMSAwIDAgMCAxLjIyIDEuMjJoMy4yMmE3LjIzIDcuMjMgMCAwIDAgNy4yMy03LjIzdi0zLjIyWiIgZmlsbD0idXJsKCNhKSIvPjxwYXRoIGQ9Ik0yNS43NyAyLjI0YTEuMjEgMS4yMSAwIDAgMC0xLjIyIDEuMjJ2My4yMmE3LjIzIDcuMjMgMCAwIDAgNy4yMyA3LjIzaDMuMjJhMS4yMSAxLjIxIDAgMCAwIDEuMjItMS4yMlY5LjQ3YTcuMjMgNy4yMyAwIDAgMC03LjIzLTcuMjNoLTMuMjJaIiBmaWxsPSJ1cmwoI2IpIi8+PHBhdGggZD0iTTIuMjQgMTEuNjlhMS4yMSAxLjIxIDAgMCAwIDEuMjIgMS4yMmgzLjIyYTcuMjMgNy4yMyAwIDAgMCA3LjIzLTcuMjNWMi40NmExLjIxIDEuMjEgMCAwIDAtMS4yMi0xLjIySDkuNDdhNy4yMyA3LjIzIDAgMCAwLTcuMjMgNy4yM3YzLjIyWiIgZmlsbD0idXJsKCNjKSIvPjxwYXRoIGQ9Ik0xMy45MSAzNy43NmExLjIxIDEuMjEgMCAwIDAgMS4yMi0xLjIydi0zLjIyYTcuMjMgNy4yMyAwIDAgMC03LjIzLTcuMjNIMy42OGExLjIxIDEuMjEgMCAwIDAtMS4yMiAxLjIydjMuMjJhNy4yMyA3LjIzIDAgMCAwIDcuMjMgNy4yM2gzLjIyWiIgZmlsbD0idXJsKCNkKSIvPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYSIgeDE9IjI1Ljc3IiB5MT0iMTkuODYiIHgyPSIzNy40NCIgeTI9IjE5Ljg2IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzAwRkZBMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0RDMUZGRiIvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMjUuNzciIHkxPSI3LjIzIiB4Mj0iMzcuNDQiIHkyPSI3LjIzIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzAwRkZBMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0RDMUZGRiIvPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJjIiB4MT0iMi4yNCIgeTE9IjcuMjMiIHgyPSIxMy45MSIgeTI9IjcuMjMiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjMDBGRkEzIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjREMxRkZGIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImQiIHgxPSIyLjI0IiB5MT0iMzIuNzciIHgyPSIxMy45MSIgeTI9IjMyLjc3IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzAwRkZBMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI0RDMUZGRiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjwvc3ZnPg=="
+                  src={solanaLogoMark}
                   alt="SOL"
-                  className="w-5 h-5"
+                  className="inline-block ml-1 w-3 h-3"
                 />
                 <p className="text-lg font-medium text-green-400">
                   {balance.toFixed(2)} SOL

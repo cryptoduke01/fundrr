@@ -1,0 +1,10 @@
+version: '3'
+services:
+  fundrr:
+    build: .
+    volumes:
+      - .:/app
+      - ~/.config/solana:/root/.config/solana
+    environment:
+      - SOLANA_CLUSTER_URL=https://api.devnet.solana.com
+    command: sh -c "solana config set --url devnet && anchor build && anchor deploy" 

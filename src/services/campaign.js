@@ -11,7 +11,7 @@ export class CampaignService {
     this.wallet = wallet;
   }
 
-  async createCampaign(title, description, goalAmount, duration, currency, category) {
+  async createCampaign(title, metadataUrl, goalAmount, duration, currency, category) {
     const campaign = web3.Keypair.generate();
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + duration);
@@ -28,7 +28,7 @@ export class CampaignService {
         await this.program.methods
           .initializeCampaign(
             title,
-            description,
+            metadataUrl, // Store IPFS URL in description
             new BN(goalAmount * 1e6), // Convert to USDC decimals
             new BN(Math.floor(deadline.getTime() / 1000)), // Unix timestamp
             category,
@@ -48,7 +48,7 @@ export class CampaignService {
         await this.program.methods
           .initializeCampaign(
             title,
-            description,
+            metadataUrl, // Store IPFS URL in description
             new BN(goalAmount * web3.LAMPORTS_PER_SOL), // Convert to lamports
             new BN(Math.floor(deadline.getTime() / 1000)), // Unix timestamp
             category,
@@ -67,6 +67,17 @@ export class CampaignService {
     } catch (error) {
       console.error('Error creating campaign:', error);
       throw error;
+    }
+  }
+
+  async fetchMetadata(metadataUrl) {
+    try {
+      const response = await fetch(metadataUrl);
+      const metadata = await response.json();
+      return metadata;
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      return null;
     }
   }
 
@@ -160,11 +171,15 @@ export class CampaignService {
       const isUsdc = campaign.isUsdc;
       const divisor = isUsdc ? 1e6 : web3.LAMPORTS_PER_SOL;
 
+      // Fetch metadata from IPFS
+      const metadata = await this.fetchMetadata(campaign.description);
+
       return {
         publicKey: pubkey,
         creator: campaign.creator,
         title: campaign.title,
-        description: campaign.description,
+        description: metadata ? metadata.description : campaign.description,
+        imageUrl: metadata ? metadata.imageUrl : null,
         goalAmount: campaign.goalAmount.toNumber() / divisor,
         amountRaised: campaign.amountRaised.toNumber() / divisor,
         deadline: new Date(campaign.deadline.toNumber() * 1000),
@@ -181,15 +196,19 @@ export class CampaignService {
   async getAllCampaigns() {
     try {
       const campaigns = await this.program.account.campaign.all();
-      return campaigns.map(({ publicKey, account }) => {
+      return Promise.all(campaigns.map(async ({ publicKey, account }) => {
         const isUsdc = account.isUsdc;
         const divisor = isUsdc ? 1e6 : web3.LAMPORTS_PER_SOL;
+
+        // Fetch metadata from IPFS
+        const metadata = await this.fetchMetadata(account.description);
 
         return {
           publicKey,
           creator: account.creator,
           title: account.title,
-          description: account.description,
+          description: metadata ? metadata.description : account.description,
+          imageUrl: metadata ? metadata.imageUrl : null,
           goalAmount: account.goalAmount.toNumber() / divisor,
           amountRaised: account.amountRaised.toNumber() / divisor,
           deadline: new Date(account.deadline.toNumber() * 1000),
@@ -197,7 +216,7 @@ export class CampaignService {
           currency: isUsdc ? 'USDC' : 'SOL',
           category: account.category
         };
-      });
+      }));
     } catch (error) {
       console.error('Error fetching all campaigns:', error);
       throw error;
@@ -214,15 +233,19 @@ export class CampaignService {
           },
         },
       ]);
-      return campaigns.map(({ publicKey, account }) => {
+      return Promise.all(campaigns.map(async ({ publicKey, account }) => {
         const isUsdc = account.isUsdc;
         const divisor = isUsdc ? 1e6 : web3.LAMPORTS_PER_SOL;
+
+        // Fetch metadata from IPFS
+        const metadata = await this.fetchMetadata(account.description);
 
         return {
           publicKey,
           creator: account.creator,
           title: account.title,
-          description: account.description,
+          description: metadata ? metadata.description : account.description,
+          imageUrl: metadata ? metadata.imageUrl : null,
           goalAmount: account.goalAmount.toNumber() / divisor,
           amountRaised: account.amountRaised.toNumber() / divisor,
           deadline: new Date(account.deadline.toNumber() * 1000),
@@ -230,7 +253,7 @@ export class CampaignService {
           currency: isUsdc ? 'USDC' : 'SOL',
           category: account.category
         };
-      });
+      }));
     } catch (error) {
       console.error('Error fetching user campaigns:', error);
       throw error;

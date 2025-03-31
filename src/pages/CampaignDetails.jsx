@@ -107,45 +107,57 @@ const CampaignDetails = () => {
           <div className="bg-gray-800 rounded-xl overflow-hidden">
             {/* Campaign Image */}
             <div className="h-64 bg-gray-700 flex items-center justify-center">
-              <svg className="w-24 h-24 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              {campaign.imageUrl ? (
+                <img
+                  src={campaign.imageUrl}
+                  alt={campaign.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <svg className="w-24 h-24 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
             </div>
 
             {/* Campaign Details */}
             <div className="p-6">
-              <h1 className="text-2xl font-bold text-white mb-4">{campaign.title}</h1>
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold text-white">{campaign.title}</h1>
+                <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-sm">
+                  {campaign.category}
+                </span>
+              </div>
 
               <div className="mb-6">
                 <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Progress ({campaign.progress.toFixed(1)}%)</span>
-                  <span>{campaign.amountRaised} / {campaign.goalAmount} SOL</span>
+                  <span>Progress ({((campaign.amountRaised / campaign.goalAmount) * 100).toFixed(1)}%)</span>
+                  <span>{campaign.amountRaised} / {campaign.goalAmount} {campaign.currency}</span>
                 </div>
                 <div className="w-full bg-gray-700 rounded-full h-2.5">
                   <div
                     className="bg-purple-600 h-2.5 rounded-full"
-                    style={{ width: `${Math.min(100, campaign.progress)}%` }}
+                    style={{ width: `${Math.min(100, (campaign.amountRaised / campaign.goalAmount) * 100)}%` }}
                   ></div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="text-sm text-gray-400">Raised</div>
-                  <div className="text-xl font-bold text-white">{campaign.amountRaised} SOL</div>
-                </div>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="text-sm text-gray-400">Goal</div>
-                  <div className="text-xl font-bold text-white">{campaign.goalAmount} SOL</div>
-                </div>
-                <div className="bg-gray-700 p-4 rounded-lg">
-                  <div className="text-sm text-gray-400">Days Left</div>
-                  <div className="text-xl font-bold text-white">{daysLeft}</div>
-                </div>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-white mb-2">About the Campaign</h2>
+                <p className="text-gray-300">{campaign.description}</p>
               </div>
 
-              <div className="prose prose-invert max-w-none mb-8">
-                <p className="text-gray-300">{campaign.description}</p>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-700/50 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Creator</p>
+                  <p className="text-white font-mono">{campaign.creator.toString()}</p>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Deadline</p>
+                  <p className="text-white">
+                    {new Date(campaign.deadline).toLocaleDateString()} ({daysLeft} days left)
+                  </p>
+                </div>
               </div>
 
               {/* Contribution Form */}
@@ -156,9 +168,9 @@ const CampaignDetails = () => {
                       type="number"
                       value={contributionAmount}
                       onChange={(e) => setContributionAmount(e.target.value)}
-                      placeholder="Amount in SOL"
+                      placeholder={`Amount in ${campaign.currency}`}
                       className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
-                      min="1"
+                      min="0.1"
                       step="0.1"
                       required
                     />
