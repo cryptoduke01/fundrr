@@ -194,7 +194,7 @@ export function SummaryCards() {
             whileTap={{ scale: 0.98 }}
           >
             <Button className="w-full bg-blue-600 hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base py-2.5 sm:py-3 font-medium">
-              Create Campaign
+              Create Campaign <span className="cursor-pointer" onClick={() => window.location.href = '/create'} />
             </Button>
           </motion.div>
         </div>
