@@ -110,7 +110,7 @@ export function Dashboard() {
         const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
         const data = await response.json();
         setSolPrice(data.solana.usd);
-      } catch (error) {
+        } catch (error) {
         console.error("Error fetching SOL price:", error);
       }
     };
@@ -131,7 +131,7 @@ export function Dashboard() {
         }
       }
     };
-
+    
     if (wallet.connected) {
       fetchBalance();
       const intervalId = setInterval(fetchBalance, 30000);
@@ -317,31 +317,31 @@ export function Dashboard() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-500" />
             <span className="text-slate-400">Balance: {balance?.toFixed(2) || '0.00'} SOL</span>
-          </div>
+              </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500" />
             <span className="text-slate-400">Contributed: {balance?.toFixed(2) || '0.00'} SOL</span>
-          </div>
+              </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-purple-500" />
             <span className="text-slate-400">Received: {balance?.toFixed(2) || '0.00'} SOL</span>
           </div>
         </div>
-
+        
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <SummaryCards />
-          </div>
+              <SummaryCards />
+            </div>
 
           <div className="lg:col-span-4">
-            <Transactions />
+              <Transactions />
+            </div>
           </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
           <div className="lg:col-span-8">
             <Statistics />
-          </div>
+                </div>
 
           <div className="lg:col-span-4">
             <LiveUpdates />

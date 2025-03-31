@@ -1,6 +1,8 @@
-import { Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -16,8 +18,98 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import CustomWalletButton from './components/CustomWalletButton';
 
-function App() {
+// Loading Spinner Component
+const LoadingSpinner = ({ itemName, message }) => (
+  <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0A0F1C] z-50">
+    <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+    <h2 className="mt-4 text-xl font-medium text-white">Loading {itemName}</h2>
+    <p className="mt-2 text-sm text-gray-400">{message}</p>
+  </div>
+);
+
+const App = () => {
   const { connected } = useWallet();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingItem, setLoadingItem] = useState('');
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [showContent, setShowContent] = useState(false);
+
+  const getLoadingMessage = (path) => {
+    switch (path) {
+      case '/discover':
+        return 'Fetching available campaigns...';
+      case '/create':
+        return 'Preparing campaign creation form...';
+      case '/profile':
+        return 'Loading your profile data...';
+      case '/settings':
+        return 'Loading your preferences...';
+      case '/campaigns':
+        return 'Fetching your campaign history...';
+      case '/campaign/:id':
+        return 'Loading campaign details...';
+      default:
+        return 'Loading...';
+    }
+  };
+
+  // Handle navigation with loading state
+  const handleNavigation = (path, itemName) => {
+    // Don't show loading spinner for dashboard since it has its own
+    if (path === '/') {
+      navigate(path);
+      return;
+    }
+
+    // First hide content and show loader
+    setShowContent(false);
+    setIsLoading(true);
+    setLoadingItem(itemName);
+    setLoadingMessage(getLoadingMessage(path));
+
+    // Delay navigation slightly to ensure loader shows first
+    setTimeout(() => {
+      navigate(path);
+    }, 100);
+  };
+
+  // Reset loading state after navigation
+  useEffect(() => {
+    // Show dashboard content immediately
+    if (location.pathname === '/') {
+      setShowContent(true);
+      setIsLoading(false);
+      setLoadingItem('');
+      setLoadingMessage('');
+      return;
+    }
+
+    // For other routes, manage loading state
+    const timer = setTimeout(() => {
+      setShowContent(true);
+      setIsLoading(false);
+      setLoadingItem('');
+      setLoadingMessage('');
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  // Initial setup
+  useEffect(() => {
+    const currentPath = location.pathname;
+    if (currentPath === '/') {
+      setShowContent(true);
+    } else {
+      setShowContent(false);
+      setIsLoading(true);
+      const pageName = currentPath.split('/')[1];
+      setLoadingItem(pageName.charAt(0).toUpperCase() + pageName.slice(1));
+      setLoadingMessage(getLoadingMessage(currentPath));
+    }
+  }, []);
 
   if (!connected) {
     return (
@@ -76,24 +168,37 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0A0F1C] text-white">
       <div className="flex h-screen">
-        <Sidebar />
+        <Sidebar onNavigate={handleNavigation} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
           <main className="flex-1 overflow-y-auto p-6">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/create" element={<CreateCampaign />} />
-              <Route path="/campaign/:id" element={<CampaignDetails />} />
-              <Route path="/discover" element={<DiscoverCampaigns />} />
-              <Route path="/campaigns" element={<MyCampaigns />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
+            <AnimatePresence mode="wait">
+              {isLoading && <LoadingSpinner itemName={loadingItem} message={loadingMessage} />}
+              {showContent && (
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/create" element={<CreateCampaign />} />
+                    <Route path="/campaign/:id" element={<CampaignDetails />} />
+                    <Route path="/discover" element={<DiscoverCampaigns />} />
+                    <Route path="/campaigns" element={<MyCampaigns />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/settings" element={<Settings />} />
+                  </Routes>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </main>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default App;
