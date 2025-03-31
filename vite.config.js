@@ -8,27 +8,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'process': 'process/browser',
-      'stream': 'stream-browserify',
-      'zlib': 'browserify-zlib',
-      'util': 'util'
     }
   },
   define: {
     'process.env': {},
-    'global': 'globalThis'
+    'global': 'globalThis',
   },
   build: {
+    target: 'esnext',
     commonjsOptions: {
-      transformMixedEsModules: true
-    },
-    rollupOptions: {
-      external: ['@solana/web3.js'],
-      output: {
-        manualChunks: {
-          'solana-web3': ['@solana/web3.js']
-        }
-      }
+      transformMixedEsModules: true,
     }
   }
 })

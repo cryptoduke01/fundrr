@@ -1,5 +1,4 @@
 import { Routes, Route } from 'react-router-dom';
-import dynamic from 'next/dynamic';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -14,12 +13,7 @@ import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import CustomWalletButton from './components/CustomWalletButton';
-
-// Dynamically import wallet components
-const WalletConnectionProvider = dynamic(
-  () => import('./contexts/WalletConnectionProvider'),
-  { ssr: false }
-);
+import WalletConnectionProvider from './contexts/WalletConnectionProvider';
 
 function App() {
   return (
