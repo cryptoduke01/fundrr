@@ -2,8 +2,11 @@
 seeds = false
 skip-lint = false
 
+[programs.localnet]
+fundrr = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+
 [programs.devnet]
-fundrr = "FUNDRR_PROGRAM_ID"
+fundrr = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
 [programs.mainnet-beta]
 fundrr = "FUNDRR_PROGRAM_ID"
@@ -12,11 +15,13 @@ fundrr = "FUNDRR_PROGRAM_ID"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+build = "anchor build"
+deploy = "anchor deploy"
 
 [test]
 startup_wait = 10000

@@ -1,48 +1,191 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Moon, Sun, Globe, Shield, Wallet } from 'lucide-react';
+import { Bell, Moon, Sun, Globe, Shield, Wallet, Check } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { AppSettingsContext } from '../App';
 
 const Settings = () => {
+  const { disconnect } = useWallet();
+  const {
+    theme,
+    setTheme,
+    language,
+    setLanguage,
+    reduceAnimations,
+    setReduceAnimations,
+    autoLockTimer,
+    setAutoLockTimer
+  } = useContext(AppSettingsContext);
+
+  const [savedMessage, setSavedMessage] = React.useState(false);
+  const [notifications, setNotifications] = React.useState({
+    campaignUpdates: true,
+    newContributions: true,
+    campaignMilestones: true
+  });
+  const [security, setSecurity] = React.useState({
+    transactionConfirmations: true
+  });
+  const [wallet, setWallet] = React.useState({
+    defaultGasSettings: 'Normal',
+    showTestNetworks: false
+  });
+  const [timeZone, setTimeZone] = React.useState('UTC-5');
+
+  const handleToggle = (section, option) => {
+    if (section === 'Appearance') {
+      if (option === 'Reduce Animations') {
+        setReduceAnimations(!reduceAnimations);
+      }
+    } else if (section === 'Notifications') {
+      setNotifications({
+        ...notifications,
+        [option.toLowerCase().replace(' ', '')]: !notifications[option.toLowerCase().replace(' ', '')]
+      });
+    } else if (section === 'Security') {
+      setSecurity({
+        ...security,
+        [option.toLowerCase().replace(' ', '')]: !security[option.toLowerCase().replace(' ', '')]
+      });
+    } else if (section === 'Wallet') {
+      setWallet({
+        ...wallet,
+        [option.toLowerCase().replace(' ', '')]: !wallet[option.toLowerCase().replace(' ', '')]
+      });
+    }
+
+    showSavedMessage();
+  };
+
+  const handleSelectChange = (section, option, value) => {
+    if (section === 'Appearance' && option === 'Theme') {
+      setTheme(value);
+    } else if (section === 'Language & Region') {
+      if (option === 'Language') {
+        setLanguage(value);
+      } else if (option === 'Time Zone') {
+        setTimeZone(value);
+      }
+    } else if (section === 'Security' && option === 'Auto-lock Timer') {
+      const minutes = parseInt(value);
+      setAutoLockTimer(minutes);
+    } else if (section === 'Wallet' && option === 'Default Gas Settings') {
+      setWallet({
+        ...wallet,
+        defaultGasSettings: value
+      });
+    }
+
+    showSavedMessage();
+  };
+
+  const showSavedMessage = () => {
+    setSavedMessage(true);
+    setTimeout(() => {
+      setSavedMessage(false);
+    }, 2000);
+  };
+
   const settingSections = [
     {
       title: 'Appearance',
-      icon: Sun,
+      icon: theme === 'Dark' ? Moon : Sun,
       options: [
-        { label: 'Theme', value: 'Dark', type: 'select', options: ['Light', 'Dark', 'System'] },
-        { label: 'Reduce Animations', type: 'toggle', value: false },
+        {
+          label: 'Theme',
+          value: theme,
+          type: 'select',
+          options: ['Light', 'Dark', 'System'],
+          onChange: (value) => handleSelectChange('Appearance', 'Theme', value)
+        },
+        {
+          label: 'Reduce Animations',
+          type: 'toggle',
+          value: reduceAnimations,
+          onChange: () => handleToggle('Appearance', 'Reduce Animations')
+        },
       ]
     },
     {
       title: 'Notifications',
       icon: Bell,
       options: [
-        { label: 'Campaign Updates', type: 'toggle', value: true },
-        { label: 'New Contributions', type: 'toggle', value: true },
-        { label: 'Campaign Milestones', type: 'toggle', value: true },
+        {
+          label: 'Campaign Updates',
+          type: 'toggle',
+          value: notifications.campaignUpdates,
+          onChange: () => handleToggle('Notifications', 'Campaign Updates')
+        },
+        {
+          label: 'New Contributions',
+          type: 'toggle',
+          value: notifications.newContributions,
+          onChange: () => handleToggle('Notifications', 'New Contributions')
+        },
+        {
+          label: 'Campaign Milestones',
+          type: 'toggle',
+          value: notifications.campaignMilestones,
+          onChange: () => handleToggle('Notifications', 'Campaign Milestones')
+        },
       ]
     },
     {
       title: 'Language & Region',
       icon: Globe,
       options: [
-        { label: 'Language', value: 'English', type: 'select', options: ['English', 'Spanish', 'French'] },
-        { label: 'Time Zone', value: 'UTC-5', type: 'select', options: ['UTC-8', 'UTC-5', 'UTC+0', 'UTC+1'] },
+        {
+          label: 'Language',
+          value: language,
+          type: 'select',
+          options: ['English', 'Spanish', 'French', 'German', 'Chinese'],
+          onChange: (value) => handleSelectChange('Language & Region', 'Language', value)
+        },
+        {
+          label: 'Time Zone',
+          value: timeZone,
+          type: 'select',
+          options: ['UTC-8', 'UTC-5', 'UTC+0', 'UTC+1', 'UTC+8'],
+          onChange: (value) => handleSelectChange('Language & Region', 'Time Zone', value)
+        },
       ]
     },
     {
       title: 'Security',
       icon: Shield,
       options: [
-        { label: 'Transaction Confirmations', type: 'toggle', value: true },
-        { label: 'Auto-lock Timer', value: '5 minutes', type: 'select', options: ['1 minute', '5 minutes', '15 minutes', '30 minutes'] },
+        {
+          label: 'Transaction Confirmations',
+          type: 'toggle',
+          value: security.transactionConfirmations,
+          onChange: () => handleToggle('Security', 'Transaction Confirmations')
+        },
+        {
+          label: 'Auto-lock Timer',
+          value: `${autoLockTimer} minutes`,
+          type: 'select',
+          options: ['1 minute', '5 minutes', '10 minutes', '15 minutes', '30 minutes'],
+          onChange: (value) => handleSelectChange('Security', 'Auto-lock Timer', parseInt(value.split(' ')[0]))
+        },
       ]
     },
     {
       title: 'Wallet',
       icon: Wallet,
       options: [
-        { label: 'Default Gas Settings', type: 'select', value: 'Normal', options: ['Low', 'Normal', 'High'] },
-        { label: 'Show Test Networks', type: 'toggle', value: false },
+        {
+          label: 'Default Gas Settings',
+          type: 'select',
+          value: wallet.defaultGasSettings,
+          options: ['Low', 'Normal', 'High'],
+          onChange: (value) => handleSelectChange('Wallet', 'Default Gas Settings', value)
+        },
+        {
+          label: 'Show Test Networks',
+          type: 'toggle',
+          value: wallet.showTestNetworks,
+          onChange: () => handleToggle('Wallet', 'Show Test Networks')
+        },
       ]
     }
   ];
@@ -55,6 +198,18 @@ const Settings = () => {
         </h1>
         <p className="text-gray-400 mt-2">Customize your experience and preferences</p>
       </div>
+
+      {savedMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-xl flex items-center gap-2"
+        >
+          <Check className="w-5 h-5 text-green-500" />
+          <span className="text-green-500">Settings saved successfully</span>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 gap-6">
         {settingSections.map((section, index) => {
@@ -82,6 +237,7 @@ const Settings = () => {
                     <span className="text-gray-300">{option.label}</span>
                     {option.type === 'toggle' ? (
                       <button
+                        onClick={option.onChange}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${option.value ? 'bg-purple-500' : 'bg-gray-700'
                           }`}
                       >
@@ -91,9 +247,13 @@ const Settings = () => {
                         />
                       </button>
                     ) : (
-                      <select className="bg-gray-700 text-gray-300 rounded-lg px-3 py-1 outline-none focus:ring-2 focus:ring-purple-500/50">
+                      <select
+                        className="bg-gray-700 text-gray-300 rounded-lg px-3 py-1 outline-none focus:ring-2 focus:ring-purple-500/50"
+                        value={option.value}
+                        onChange={(e) => option.onChange(e.target.value)}
+                      >
                         {option.options.map((opt) => (
-                          <option key={opt} selected={opt === option.value}>
+                          <option key={opt} value={opt}>
                             {opt}
                           </option>
                         ))}

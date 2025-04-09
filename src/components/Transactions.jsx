@@ -103,7 +103,7 @@ const Transactions = () => {
 
       <div className="space-y-4">
         {dummyTransactions.map((tx, index) => (
-          <motion.div
+          <motion.div 
             key={tx.signature}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -150,7 +150,7 @@ const Transactions = () => {
             className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
             onClick={() => setIsModalOpen(false)}
           >
-            <motion.div
+            <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -166,7 +166,7 @@ const Transactions = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
+              
               <div className="space-y-4">
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Transaction Hash</p>
@@ -212,7 +212,7 @@ const Transactions = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
   );
 };
 
