@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Solana
+test-ledger/
+.anchor/
+target/
+**/*.rs.bk
+
+# Large files
+*.sst
+*.tar.bz2
+*.tar.zst
