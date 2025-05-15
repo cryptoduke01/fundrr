@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { motion } from 'framer-motion';
 import solanaLogoMark from '../assets/solanaLogoMark.png';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { fetchUserCampaigns } from '../utils/programHelpers';
+import { useProgram } from '../contexts/ProgramContext';
+import TransactionHistory from '../components/TransactionHistory';
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Button } from "../components/ui/button";
+import { CopyIcon, ExternalLinkIcon } from "lucide-react";
+import CampaignCard from '../components/CampaignCard';
 
 // import Header from '../components/Header';
 
@@ -10,9 +20,12 @@ const Profile = () => {
   const { publicKey, connected } = useWallet();
   const { connection } = useConnection();
   const navigate = useNavigate();
-  const [balance, setBalance] = useState(null);
+  const program = useProgram();
+  const [balance, setBalance] = useState(0);
   const [solPrice, setSolPrice] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [userCampaigns, setUserCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const shortenAddress = (address) => {
     if (!address) return '';
@@ -25,14 +38,24 @@ const Profile = () => {
       return;
     }
 
-    const fetchBalance = async () => {
-      if (publicKey) {
-        try {
-          const walletBalance = await connection.getBalance(publicKey);
-          setBalance(walletBalance / 1_000_000_000);
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-        }
+    const fetchData = async () => {
+      if (!publicKey || !program) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Get user's SOL balance
+        const balance = await connection.getBalance(publicKey);
+        setBalance(balance / LAMPORTS_PER_SOL);
+
+        // Get user's campaigns
+        const campaigns = await fetchUserCampaigns(program, publicKey);
+        setUserCampaigns(campaigns);
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -46,17 +69,17 @@ const Profile = () => {
       }
     };
 
-    fetchBalance();
+    fetchData();
     fetchSolPrice();
 
-    const balanceInterval = setInterval(fetchBalance, 30000);
+    const balanceInterval = setInterval(fetchData, 30000);
     const priceInterval = setInterval(fetchSolPrice, 60000);
 
     return () => {
       clearInterval(balanceInterval);
       clearInterval(priceInterval);
     };
-  }, [publicKey, connected, connection, navigate]);
+  }, [publicKey, connected, connection, navigate, program]);
 
   const handleCopyAddress = async () => {
     if (publicKey) {
@@ -76,149 +99,95 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-6 lg:p-8">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-          My Profile
-        </h1>
-        <p className="text-sm sm:text-base text-gray-400 mt-2">Manage your profile and view your contributions</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Profile Info Card */}
-        <div className="lg:col-span-1">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-800/50"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mb-4">
-                <span className="text-2xl sm:text-3xl font-bold text-white">
-                  {publicKey?.toString().slice(0, 2)}
-                </span>
-              </div>
-              <div className="mt-4 w-full">
-                <div className="flex items-center justify-center gap-2 bg-gray-800/50 rounded-xl p-2 sm:p-3 hover:bg-gray-800/70 transition-colors">
-                  <p className="font-mono text-xs sm:text-sm text-gray-300">
+    <div className="container mx-auto px-4 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <Card className="md:col-span-1">
+          <CardHeader className="flex flex-col items-center">
+            <Avatar className="h-24 w-24 mb-4">
+              <AvatarImage src={`https://api.dicebear.com/7.x/identicon/svg?seed=${publicKey}`} alt="Avatar" />
+              <AvatarFallback>
+                {publicKey?.toString().slice(0, 2) || 'NA'}
+              </AvatarFallback>
+            </Avatar>
+            <CardTitle>My Wallet</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Wallet Address</div>
+                <div className="flex items-center justify-between bg-muted p-2 rounded">
+                  <span className="text-sm font-mono">
                     {shortenAddress(publicKey?.toString())}
-                  </p>
-                  <button
-                    onClick={handleCopyAddress}
-                    className="hover:bg-gray-700/50 p-1.5 rounded-lg transition-colors"
-                  >
-                    {copied ? (
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Balance Section */}
-            <div className="mt-4 sm:mt-6">
-              <div className="bg-gray-800/50 rounded-xl p-3 sm:p-4">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="relative group">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                      <img
-                        src={solanaLogoMark}
-                        alt="SOL"
-                        className="relative w-8 h-8 sm:w-10 sm:h-10"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm text-gray-400">Balance</p>
-                      <p className="text-base sm:text-xl font-bold text-white">{balance ? `${balance.toFixed(2)} SOL` : '0.00 SOL'}</p>
-                    </div>
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={handleCopyAddress}>
+                      <CopyIcon className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon"
+                      onClick={() => window.open(`https://explorer.solana.com/address/${publicKey}?cluster=devnet`, '_blank')}>
+                      <ExternalLinkIcon className="h-4 w-4" />
+                    </Button>
                   </div>
-                  {balance !== null && solPrice !== null && (
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm text-gray-400">Value</p>
-                      <p className="text-base sm:text-xl font-bold text-green-500">
-                        ${(balance * solPrice).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
-                <div className="mt-3 sm:mt-4 flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">SOL Price</span>
-                  <span className="text-white font-medium">${solPrice ? solPrice.toFixed(2) : '0.00'}</span>
                 </div>
               </div>
+
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Balance</div>
+                <div className="text-2xl font-bold">{balance.toFixed(4)} SOL</div>
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Network</div>
+                <div className="flex items-center">
+                  <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                  <span>Solana Devnet</span>
+                </div>
+              </div>
+
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => window.open('https://solfaucet.com/', '_blank')}
+              >
+                Get Devnet SOL
+              </Button>
             </div>
-          </motion.div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Stats and Activity */}
-        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-800/50"
-            >
-              <h3 className="text-base sm:text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                Campaigns Created
-              </h3>
-              <p className="text-2xl sm:text-3xl font-bold mt-2 text-white">0</p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-gray-400">Total campaigns initiated</span>
-              </div>
-            </motion.div>
+        {/* Tabs Section */}
+        <div className="md:col-span-2">
+          <Tabs defaultValue="campaigns">
+            <TabsList className="w-full mb-6">
+              <TabsTrigger value="campaigns" className="flex-1">My Campaigns</TabsTrigger>
+              <TabsTrigger value="transactions" className="flex-1">Transaction History</TabsTrigger>
+            </TabsList>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-800/50"
-            >
-              <h3 className="text-base sm:text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                Total Contributed
-              </h3>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-2xl sm:text-3xl font-bold text-white">0</p>
-                <div className="relative group w-5 h-5 sm:w-6 sm:h-6">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
-                  <img
-                    src={solanaLogoMark}
-                    alt="SOL"
-                    className="relative w-full h-full"
-                  />
+            <TabsContent value="campaigns">
+              {loading ? (
+                <div className="flex justify-center items-center p-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-gray-400">Across all campaigns</span>
-              </div>
-            </motion.div>
-          </div>
+              ) : userCampaigns.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {userCampaigns.map((campaign) => (
+                    <CampaignCard key={campaign.publicKey.toString()} campaign={campaign} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-12 bg-background rounded-lg">
+                  <h3 className="text-xl font-medium mb-2">No Campaigns Yet</h3>
+                  <p className="text-gray-500 mb-6">You haven't created any campaigns yet.</p>
+                  <Button onClick={() => window.location.href = '/create'}>Create a Campaign</Button>
+                </div>
+              )}
+            </TabsContent>
 
-          {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-800/50"
-          >
-            <h3 className="text-base sm:text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-              Recent Activity
-            </h3>
-            <div className="mt-4">
-              <div className="text-center text-gray-400 py-6 sm:py-8">
-                No recent activity to display
-              </div>
-            </div>
-          </motion.div>
+            <TabsContent value="transactions">
+              <TransactionHistory />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

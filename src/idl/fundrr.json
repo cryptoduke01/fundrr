@@ -54,17 +54,7 @@
           "isSigner": true
         },
         {
-          "name": "contributorTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "campaignTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -90,17 +80,7 @@
           "isSigner": true
         },
         {
-          "name": "campaignTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -121,22 +101,7 @@
           "isSigner": true
         },
         {
-          "name": "contributionAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "campaignTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "contributorTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
+          "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }

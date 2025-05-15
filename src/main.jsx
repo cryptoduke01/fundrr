@@ -19,6 +19,7 @@ import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adap
 import { clusterApiUrl } from '@solana/web3.js';
 import App from './App';
 import './index.css';
+import { ProgramProvider } from './contexts/ProgramContext';
 
 // Import wallet styles
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -38,9 +39,11 @@ const Main = () => {
       <ConnectionProvider endpoint={endpoint}>
         <WalletProvider wallets={wallets} autoConnect>
           <WalletModalProvider>
+            <ProgramProvider>
             <BrowserRouter>
               <App />
             </BrowserRouter>
+            </ProgramProvider>
           </WalletModalProvider>
         </WalletProvider>
       </ConnectionProvider>

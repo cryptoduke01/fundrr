@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-const Sidebar = ({ onNavigate }) => {
+const Sidebar = ({ onNavigate, currentItem, isLoading }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { disconnect } = useWallet();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -33,7 +34,7 @@ const Sidebar = ({ onNavigate }) => {
 
   const handleLogout = () => {
     disconnect();
-    onNavigate('/', 'Dashboard');
+    navigate('/');
   };
 
   const toggleMobileMenu = () => {
@@ -41,7 +42,11 @@ const Sidebar = ({ onNavigate }) => {
   };
 
   const handleNavigation = (path, label) => {
-    onNavigate(path, label);
+    if (onNavigate) {
+      onNavigate(path);
+    } else {
+      navigate(path);
+    }
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
 

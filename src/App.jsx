@@ -163,7 +163,7 @@ const App = () => {
         return 'Loading your preferences...';
       case '/my-campaigns':
         return 'Fetching your campaign history...';
-      case '/campaign/:id':
+      case '/campaign/e:id':
         return 'Loading campaign details...';
       default:
         return 'Loading...';
@@ -172,44 +172,17 @@ const App = () => {
 
   // Handle navigation with loading state
   const handleNavigation = (path, itemName) => {
-    // Don't show loading spinner for dashboard since it has its own
-    if (path === '/') {
-      navigate(path);
-      return;
-    }
-
-    // First hide content and show loader
-    setShowContent(false);
-    setIsLoading(true);
-    setLoadingItem(itemName);
-    setLoadingMessage(getLoadingMessage(path));
-
-    // Delay navigation slightly to ensure loader shows first
-    setTimeout(() => {
-      navigate(path);
-    }, 100);
+    // Don't show loading for any pages - just navigate directly
+    navigate(path);
   };
 
   // Reset loading state after navigation
   useEffect(() => {
-    // Show dashboard content immediately
-    if (location.pathname === '/') {
-      setShowContent(true);
-      setIsLoading(false);
-      setLoadingItem('');
-      setLoadingMessage('');
-      return;
-    }
-
-    // For other routes, manage loading state
-    const timer = setTimeout(() => {
-      setShowContent(true);
-      setIsLoading(false);
-      setLoadingItem('');
-      setLoadingMessage('');
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // For all routes, show content immediately
+    setShowContent(true);
+    setIsLoading(false);
+    setLoadingItem('');
+    setLoadingMessage('');
   }, [location.pathname]);
 
   // Initial setup
@@ -241,73 +214,58 @@ const App = () => {
   if (!connected) {
     return (
       <AppSettingsContext.Provider value={settingsContextValue}>
-        <div className="min-h-screen bg-gray-950 text-white">
+        <div className="min-h-screen bg-background text-foreground">
           <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
-            <div className="max-w-md w-full mx-auto">
-              <div className="text-center mb-8">
-                <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-3 rounded-2xl inline-block mb-4">
-                  <img src="/logo.png" alt="FloFi Logo" className="h-16 w-16" />
-                </div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                  Welcome to FloFi
-                </h1>
-                <p className="text-gray-400 text-base sm:text-lg md:text-xl">
-                  The decentralized funding platform for everyone
-                </p>
-              </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-md w-full rounded-2xl overflow-hidden shadow-xl"
+            >
+              <div className="bg-card p-6 sm:p-8 text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: 'spring', stiffness: 120 }}
+                  className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"
+                >
+                  <img src="/logo.jpg" alt="Fundrr Logo" className="h-16 w-16" />
+                </motion.div>
 
-              <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-2xl p-6 md:p-8 mb-6">
-                <div className="mb-8 text-center">
-                  <h2 className="text-xl font-semibold mb-2">Connect your wallet to continue</h2>
-                  <p className="text-gray-400 text-sm">
-                    FloFi uses Solana for fast and low-cost transactions
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                  Welcome to Fundrr
+                </h1>e
+                <p className="text-muted-foreground mb-6">
+                  Fundrr uses Solana for fast and low-cost transactions
+                </p>
+
+                <div className="mb-8">
+                  <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !rounded-lg !py-2 !px-4 !w-full !justify-center" />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Connect your wallet to start fundraising
                   </p>
                 </div>
-                <div className="flex justify-center">
-                  <WalletMultiButton className="!bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 !rounded-xl !py-3 !px-6 !w-full !justify-center !h-auto !text-base" />
-                </div>
-                <div className="mt-5 text-center">
-                  <a
-                    href="https://solana.com/ecosystem/explore"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-400 hover:text-purple-300 text-sm underline transition"
-                  >
-                    New to Solana? Learn more
-                  </a>
-                </div>
-              </div>
 
-              <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-2xl p-6">
-                <h3 className="text-lg font-medium mb-4 text-center">Platform Stats</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                      100+
-                    </p>
-                    <p className="text-gray-400 text-sm">Campaigns</p>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="bg-background p-3 rounded-lg">
+                    <div className="font-bold text-xl">Fast</div>
+                    <p className="text-muted-foreground text-sm">Near-instant transactions</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                      50K+
-                    </p>
-                    <p className="text-gray-400 text-sm">Users</p>
+                  <div className="bg-background p-3 rounded-lg">
+                    <div className="font-bold text-xl">Secure</div>
+                    <p className="text-muted-foreground text-sm">Built on Solana blockchain</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                      1000+
-                    </p>
-                    <p className="text-gray-400 text-sm">Contributions</p>
+                  <div className="bg-background p-3 rounded-lg">
+                    <div className="font-bold text-xl">Low Fees</div>
+                    <p className="text-muted-foreground text-sm">Minimal transaction costs</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-                      500+
-                    </p>
-                    <p className="text-gray-400 text-sm">SOL Raised</p>
+                  <div className="bg-background p-3 rounded-lg">
+                    <div className="font-bold text-xl">Global</div>
+                    <p className="text-muted-foreground text-sm">Borderless fundraising</p>
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </AppSettingsContext.Provider>
@@ -321,34 +279,23 @@ const App = () => {
           <Sidebar
             onNavigate={(item) => {
               setCurrentPage(item);
-              setIsLoading(true);
+              navigate(item);
             }}
             currentItem={currentPage}
             isLoading={isLoading}
           />
           <div className="flex-1 overflow-y-auto transition-all duration-200">
-            {isLoading && currentPage !== 'Dashboard' &&
-              currentPage !== 'Campaign Details' &&
-              currentPage !== 'Create Campaign' ? (
-              <div className="flex justify-center items-center h-screen">
-                <div className="flex flex-col items-center">
-                  <div className="w-16 h-16 border-4 border-t-transparent border-purple-500 rounded-full animate-spin mb-4"></div>
-                  <p className="text-lg text-purple-400 font-medium">Loading {currentPage}...</p>
-                </div>
-              </div>
-            ) : (
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings" element={<Settings />} />
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
 
-                {/* Campaign routes */}
-                <Route path="/discover" element={<DiscoverCampaigns />} />
-                <Route path="/my-campaigns" element={<MyCampaigns />} />
-                <Route path="/campaign/:id" element={<CampaignDetails />} />
-                <Route path="/create-campaign" element={<CreateCampaign />} />
-              </Routes>
-            )}
+              {/* Campaign routes */}
+              <Route path="/discover" element={<DiscoverCampaigns />} />
+              <Route path="/my-campaigns" element={<MyCampaigns />} />
+              <Route path="/campaign/:id" element={<CampaignDetails />} />
+              <Route path="/create-campaign" element={<CreateCampaign />} />
+            </Routes>
           </div>
         </div>
       </div>

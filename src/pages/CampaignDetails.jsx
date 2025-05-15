@@ -4,13 +4,19 @@ import { motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Clock, Users, Target, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { fetchCampaign, contributeToCampaign, withdrawFunds } from '../utils/CampaignFunctions';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { useProgram } from '../contexts/ProgramContext';
+import {
+  fetchCampaign,
+  contributeToCampaign,
+  withdrawFunds
+} from '../utils/programHelpers';
 
 const CampaignDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { connected, wallet, publicKey } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const program = useProgram();
 
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -22,11 +28,8 @@ const CampaignDetails = () => {
   useEffect(() => {
     const loadCampaign = async () => {
       try {
-        if (connected && wallet) {
-          const campaignData = await fetchCampaign(wallet, parseInt(id),
-            // For demo purposes, we'll just use the current wallet to simplify things
-            wallet.publicKey.toString()
-          );
+        if (connected && program && publicKey) {
+          const campaignData = await fetchCampaign(program, id, publicKey);
           setCampaign(campaignData);
         }
       } catch (error) {
@@ -37,10 +40,10 @@ const CampaignDetails = () => {
       }
     };
 
-    if (connected && wallet) {
+    if (connected && program && publicKey) {
       loadCampaign();
     }
-  }, [id, connected, wallet]);
+  }, [id, connected, program, publicKey]);
 
   // Handle contribution
   const handleContribute = async (e) => {
@@ -61,9 +64,9 @@ const CampaignDetails = () => {
       const toastId = toast.loading('Processing your contribution...');
 
       const result = await contributeToCampaign(
-        wallet,
-        parseInt(id),
-        campaign.author,
+        program,
+        { publicKey },
+        id,
         parseFloat(contributionAmount)
       );
 
@@ -72,7 +75,7 @@ const CampaignDetails = () => {
         setContributionAmount('');
 
         // Refresh campaign data after contribution
-        const updatedCampaign = await fetchCampaign(wallet, parseInt(id), campaign.author);
+        const updatedCampaign = await fetchCampaign(program, id, publicKey);
         setCampaign(updatedCampaign);
       } else {
         toast.error(`Failed to contribute: ${result.error}`, { id: toastId });
@@ -92,7 +95,7 @@ const CampaignDetails = () => {
       return;
     }
 
-    if (!campaign.isAuthor) {
+    if (!campaign.isCreator) {
       toast.error('Only the campaign creator can withdraw funds');
       return;
     }
@@ -102,15 +105,16 @@ const CampaignDetails = () => {
       const toastId = toast.loading('Withdrawing funds...');
 
       const result = await withdrawFunds(
-        wallet,
-        parseInt(id)
+        program,
+        { publicKey },
+        id
       );
 
       if (result.success) {
         toast.success('Funds withdrawn successfully!', { id: toastId });
 
         // Refresh campaign data after withdrawal
-        const updatedCampaign = await fetchCampaign(wallet, parseInt(id), campaign.author);
+        const updatedCampaign = await fetchCampaign(program, id, publicKey);
         setCampaign(updatedCampaign);
       } else {
         toast.error(`Failed to withdraw funds: ${result.error}`, { id: toastId });
@@ -146,7 +150,7 @@ const CampaignDetails = () => {
   // Calculate progress percentage
   const getProgressPercentage = () => {
     if (!campaign) return 0;
-    const percentage = (campaign.raisedAmount / campaign.goalAmount) * 100;
+    const percentage = (campaign.amountRaised / campaign.goalAmount) * 100;
     return Math.min(100, percentage);
   };
 
@@ -177,10 +181,7 @@ const CampaignDetails = () => {
   }
 
   const daysRemaining = getDaysRemaining(campaign.deadline);
-  const isActive = campaign.status === 'active';
-  const isFunded = campaign.status === 'funded';
-  const isCompleted = campaign.status === 'completed';
-  const isCancelled = campaign.status === 'cancelled';
+  const isActive = campaign.isActive;
   const hasEnded = daysRemaining === 0 || !isActive;
   const progressPercentage = getProgressPercentage();
 
@@ -196,28 +197,15 @@ const CampaignDetails = () => {
           </svg>
           Back
         </button>
-        <h1 className="text-3xl font-bold text-white mb-2">{campaign.name}</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">{campaign.title}</h1>
         <div className="flex items-center gap-4 text-gray-400 text-sm">
-          <span>By {campaign.author.slice(0, 6)}...{campaign.author.slice(-4)}</span>
-          <span>Created on {formatDate(campaign.createdAt)}</span>
+          <span>By {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column - Campaign image and details */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50">
-            <img
-              src={campaign.imageUrl}
-              alt={campaign.name}
-              className="w-full h-[300px] sm:h-[400px] object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://placehold.co/600x400?text=Campaign+Image';
-              }}
-            />
-          </div>
-
           <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
             <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
               About This Campaign
@@ -231,15 +219,10 @@ const CampaignDetails = () => {
               Campaign Status
             </h2>
             <div className="flex flex-wrap gap-4">
-              <div className={`px-4 py-2 rounded-xl text-sm font-medium 
-                ${isActive ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                  isFunded ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                    isCompleted ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                      'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                {isActive ? 'Active' :
-                  isFunded ? 'Funded' :
-                    isCompleted ? 'Completed' :
-                      'Cancelled'}
+              <div className={`px-4 py-2 rounded-xl text-sm font-medium ${isActive
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                {isActive ? 'Active' : 'Ended'}
               </div>
 
               {hasEnded ? (
@@ -248,189 +231,116 @@ const CampaignDetails = () => {
                 </div>
               ) : (
                 <div className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+                  {daysRemaining} days remaining
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right column - Funding info and contribute form */}
+        {/* Right column - Funding status and contribution */}
         <div className="space-y-6">
           <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-gray-400">Raised</span>
-                <span className="text-white font-semibold">{campaign.raisedAmount.toFixed(2)} SOL</span>
-              </div>
-              <div className="w-full bg-gray-700/50 rounded-full h-3 mb-1">
-                <div
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full"
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">{progressPercentage.toFixed(0)}%</span>
-                <span className="text-gray-400">Goal: {campaign.goalAmount.toFixed(2)} SOL</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-              <div className="bg-gray-800/50 rounded-xl p-3 text-center">
-                <Clock className="w-5 h-5 mx-auto mb-2 text-purple-500" />
-                <div className="text-lg font-bold text-white">{daysRemaining}</div>
-                <div className="text-xs text-gray-400">Days Left</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-3 text-center">
-                <Users className="w-5 h-5 mx-auto mb-2 text-purple-500" />
-                <div className="text-lg font-bold text-white">{campaign.contributorsCount}</div>
-                <div className="text-xs text-gray-400">Contributors</div>
-              </div>
-              <div className="bg-gray-800/50 rounded-xl p-3 text-center sm:col-span-1 col-span-2">
-                <Target className="w-5 h-5 mx-auto mb-2 text-purple-500" />
-                <div className="text-lg font-bold text-white">{campaign.goalAmount.toFixed(2)}</div>
-                <div className="text-xs text-gray-400">Goal (SOL)</div>
-              </div>
-            </div>
-
-            {/* Contribute form */}
-            {isActive && !campaign.isAuthor && (
-              <form onSubmit={handleContribute} className="space-y-4">
-                <div>
-                  <label className="block text-gray-300 mb-2">Contribution Amount (SOL)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={contributionAmount}
-                    onChange={(e) => setContributionAmount(e.target.value)}
-                    placeholder="e.g. 0.5"
-                    className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                    required
-                    disabled={isSubmitting}
-                  />
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-400">Progress</span>
+                  <span className="text-gray-400">{progressPercentage.toFixed(1)}%</span>
                 </div>
-                <motion.button
-                  type="submit"
-                  disabled={isSubmitting || !connected}
-                  className={`w-full p-3 rounded-xl text-white font-medium transition-colors ${isSubmitting || !connected
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
-                    }`}
-                  whileHover={!isSubmitting && connected ? { scale: 1.03 } : {}}
-                  whileTap={!isSubmitting && connected ? { scale: 0.97 } : {}}
-                >
-                  {isSubmitting ? 'Processing...' : 'Contribute to Campaign'}
-                </motion.button>
-                {!connected && (
-                  <p className="text-sm text-red-400 text-center">Connect your wallet to contribute</p>
-                )}
-              </form>
-            )}
+                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+                    style={{ width: `${progressPercentage}%` }}
+                  ></div>
+                </div>
+              </div>
 
-            {/* Withdraw funds button for campaign owner */}
-            {(isFunded || (isActive && daysRemaining === 0)) && campaign.isAuthor && (
+              <div className="flex justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-white">{campaign.amountRaised.toFixed(2)} SOL</p>
+                  <p className="text-gray-400 text-sm">of {campaign.goalAmount.toFixed(2)} SOL goal</p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4 text-purple-500" />
+                    <p className="text-gray-400 text-sm">{daysRemaining} days left</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contribute form */}
+          {isActive && (
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
+              <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
+                Support this campaign
+              </h2>
+              {connected ? (
+                <form onSubmit={handleContribute} className="space-y-4">
+                  <div>
+                    <label className="block text-gray-300 mb-2">Contribution Amount (SOL)</label>
+                    <div className="flex">
+                      <input
+                        type="number"
+                        value={contributionAmount}
+                        onChange={(e) => setContributionAmount(e.target.value)}
+                        placeholder="e.g. 0.5"
+                        step="0.01"
+                        min="0.01"
+                        className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-l-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        required
+                      />
+                      <div className="p-3 bg-gray-800 border border-l-0 border-gray-700 rounded-r-xl text-gray-400">
+                        SOL
+                      </div>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`w-full py-3 rounded-xl text-white ${isSubmitting
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
+                      } transition-colors`}
+                    whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+                    whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+                  >
+                    {isSubmitting ? 'Processing...' : 'Contribute Now'}
+                  </motion.button>
+                </form>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-400 mb-4">Connect your wallet to contribute to this campaign</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Withdraw funds button for campaign creator */}
+          {campaign.isCreator && isActive && (
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
+              <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
+                Creator Actions
+              </h2>
               <motion.button
                 onClick={handleWithdraw}
                 disabled={isWithdrawing}
-                className={`w-full p-3 rounded-xl text-white font-medium transition-colors ${isWithdrawing
+                className={`w-full py-3 rounded-xl text-white ${isWithdrawing
                   ? 'bg-gray-600 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
-                  }`}
-                whileHover={!isWithdrawing ? { scale: 1.03 } : {}}
-                whileTap={!isWithdrawing ? { scale: 0.97 } : {}}
+                  } transition-colors`}
+                whileHover={!isWithdrawing ? { scale: 1.02 } : {}}
+                whileTap={!isWithdrawing ? { scale: 0.98 } : {}}
               >
                 {isWithdrawing ? 'Processing...' : 'Withdraw Funds'}
               </motion.button>
-            )}
-
-            {/* Campaign ended message */}
-            {hasEnded && !campaign.isAuthor && (
-              <div className="text-center p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <p className="text-yellow-400 mb-1">Campaign has ended</p>
-                <p className="text-sm text-gray-400">
-                  {isFunded || isCompleted
-                    ? 'This campaign was successfully funded!'
-                    : 'This campaign did not reach its funding goal.'}
-                </p>
-              </div>
-            )}
-
-            {/* Already withdrawn message */}
-            {isCompleted && campaign.isAuthor && (
-              <div className="text-center p-3 bg-gray-800/50 rounded-xl border border-gray-700">
-                <p className="text-green-400 mb-1">Funds withdrawn</p>
-                <p className="text-sm text-gray-400">
-                  You have successfully withdrawn the funds from this campaign.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-            <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-3">
-              Campaign Timeline
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                </div>
-                <div>
-                  <p className="text-white font-medium">Campaign Created</p>
-                  <p className="text-sm text-gray-400">{formatDate(campaign.createdAt)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className={`w-6 h-6 rounded-full ${hasEnded ? 'bg-green-500/20 border border-green-500/50' : 'bg-gray-700/50 border border-gray-600/50'} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                  {hasEnded ? (
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  ) : (
-                    <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                  )}
-                </div>
-                <div>
-                  <p className={`font-medium ${hasEnded ? 'text-white' : 'text-gray-400'}`}>
-                    Campaign {hasEnded ? 'Ended' : 'Ends'}
-                  </p>
-                  <p className="text-sm text-gray-400">{formatDate(campaign.deadline)}</p>
-                </div>
-              </div>
-
-              {(isFunded || isCompleted) && (
-                <div className="flex items-start gap-3">
-                  <div className={`w-6 h-6 rounded-full ${isFunded || isCompleted ? 'bg-green-500/20 border border-green-500/50' : 'bg-gray-700/50 border border-gray-600/50'} flex items-center justify-center flex-shrink-0 mt-0.5`}>
-                    {isFunded || isCompleted ? (
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    ) : (
-                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                    )}
-                  </div>
-                  <div>
-                    <p className={`font-medium ${isFunded || isCompleted ? 'text-white' : 'text-gray-400'}`}>
-                      Funding Goal Reached
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {progressPercentage.toFixed(0)}% of {campaign.goalAmount.toFixed(2)} SOL
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {isCompleted && (
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">Funds Withdrawn</p>
-                    <p className="text-sm text-gray-400">Campaign completed successfully</p>
-                  </div>
-                </div>
-              )}
+              <p className="text-gray-400 text-sm mt-2">
+                You can withdraw funds if the campaign has met its goal or has ended.
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

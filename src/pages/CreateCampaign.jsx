@@ -3,12 +3,14 @@ import { motion } from 'framer-motion';
 import { Image, Clock, Target, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { createCampaign } from '../utils/CampaignFunctions';
 import { toast } from 'react-hot-toast';
+import { useProgram } from '../contexts/ProgramContext';
+import { createCampaign } from '../utils/programHelpers';
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
-  const { connected, wallet } = useWallet();
+  const { connected, publicKey } = useWallet();
+  const program = useProgram();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -54,7 +56,7 @@ const CreateCampaign = () => {
       toast.loading('Creating your campaign...');
 
       // Call the createCampaign function from our utils
-      const result = await createCampaign(wallet, {
+      const result = await createCampaign(program, { publicKey }, {
         name: form.name,
         description: form.description,
         goalAmount: parseFloat(form.goalAmount),
@@ -222,8 +224,8 @@ const CreateCampaign = () => {
             type="submit"
             disabled={isSubmitting}
             className={`px-6 py-3 rounded-xl text-white ${isSubmitting
-                ? 'bg-gray-600 cursor-not-allowed'
-                : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
               } transition-colors`}
             whileHover={!isSubmitting ? { scale: 1.03 } : {}}
             whileTap={!isSubmitting ? { scale: 0.97 } : {}}

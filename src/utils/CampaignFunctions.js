@@ -1,9 +1,10 @@
 import { Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import * as anchor from "@project-serum/anchor";
-import idl from "./fundrr_idl.json";
+import idl from "../idl/fundrr.json";
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 // Program ID from the deployed contract
-const PROGRAM_ID = new PublicKey("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+const PROGRAM_ID = new PublicKey("2YmiPygdaL7MfnB4otFDchBFd2gdEQnNeeYd4LueJFvu");
 
 // RPC URL for connection - Change to mainnet or other networks when ready
 const CONNECTION = new Connection('https://api.devnet.solana.com', 'confirmed');
@@ -108,34 +109,7 @@ const initializeProgram = (wallet) => {
 export const createCampaign = async (wallet, campaignData) => {
   try {
     const program = initializeProgram(wallet);
-    const counterPDA = await getCampaignCounterPDA();
-
-    // Get the current campaign counter
-    let campaignCounter;
-    try {
-      campaignCounter = await program.account.campaignCounter.fetch(counterPDA);
-    } catch (error) {
-      // If counter doesn't exist, initialize it
-      const tx = await program.methods
-        .initializeCampaignCounter()
-        .accounts({
-          campaignCounter: counterPDA,
-          authority: wallet.publicKey,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .rpc();
-
-      // Now fetch the initialized counter
-      campaignCounter = await program.account.campaignCounter.fetch(counterPDA);
-    }
-
-    const campaignId = campaignCounter.count;
-    const campaignPDA = await getCampaignPDA(campaignId);
-
-    // Convert the goal amount from SOL to lamports
-    const goalAmountLamports = new anchor.BN(
-      campaignData.goalAmount * LAMPORTS_PER_SOL
-    );
+    const campaign = anchor.web3.Keypair.generate();
 
     // Calculate deadline
     const now = new Date();
@@ -144,19 +118,18 @@ export const createCampaign = async (wallet, campaignData) => {
 
     // Create the campaign
     const tx = await program.methods
-      .createCampaign(
+      .initializeCampaign(
         campaignData.name,
         campaignData.description,
-        goalAmountLamports,
-        new anchor.BN(deadline.getTime()),
-        campaignData.imageUrl
+        new anchor.BN(campaignData.goalAmount * LAMPORTS_PER_SOL),
+        new anchor.BN(Math.floor(deadline.getTime() / 1000))
       )
       .accounts({
-        campaign: campaignPDA,
-        campaignCounter: counterPDA,
-        author: wallet.publicKey,
+        campaign: campaign.publicKey,
+        creator: wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
+      .signers([campaign])
       .rpc();
 
     // Invalidate cache
@@ -166,7 +139,7 @@ export const createCampaign = async (wallet, campaignData) => {
 
     return {
       success: true,
-      campaignId: campaignId.toString(),
+      campaignId: campaign.publicKey.toString(),
       txSignature: tx,
     };
   } catch (error) {
@@ -181,10 +154,25 @@ export const createCampaign = async (wallet, campaignData) => {
 /**
  * Contribute to a campaign
  */
-export const contributeToCampaign = async (wallet, campaignId, authorPublicKey, amount) => {
+export const contributeToCampaign = async (wallet, campaignId, amount) => {
   try {
     const program = initializeProgram(wallet);
-    const campaignPDA = await getCampaignPDA(campaignId);
+
+    // Get campaign public key
+    const campaignPubkey = new PublicKey(campaignId);
+
+    // Get contributor's token account
+    const contributorTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      wallet.publicKey
+    );
+
+    // Get campaign's token account
+    const campaignTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      campaignPubkey,
+      true
+    );
 
     // Convert SOL to lamports
     const amountLamports = new anchor.BN(amount * LAMPORTS_PER_SOL);
@@ -193,10 +181,11 @@ export const contributeToCampaign = async (wallet, campaignId, authorPublicKey, 
     const tx = await program.methods
       .contribute(amountLamports)
       .accounts({
-        campaign: campaignPDA,
-        campaignAccount: new PublicKey(authorPublicKey),
+        campaign: campaignPubkey,
         contributor: wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        contributorTokenAccount: contributorTokenAccount,
+        campaignTokenAccount: campaignTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
@@ -224,16 +213,32 @@ export const contributeToCampaign = async (wallet, campaignId, authorPublicKey, 
 export const withdrawFunds = async (wallet, campaignId) => {
   try {
     const program = initializeProgram(wallet);
-    const campaignPDA = await getCampaignPDA(campaignId);
+
+    // Get campaign public key
+    const campaignPubkey = new PublicKey(campaignId);
+
+    // Get creator's token account
+    const creatorTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      wallet.publicKey
+    );
+
+    // Get campaign's token account
+    const campaignTokenAccount = await getAssociatedTokenAddress(
+      USDC_MINT,
+      campaignPubkey,
+      true
+    );
 
     // Withdraw funds
     const tx = await program.methods
       .withdrawFunds()
       .accounts({
-        campaign: campaignPDA,
-        campaignAccount: wallet.publicKey,
-        author: wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        campaign: campaignPubkey,
+        creator: wallet.publicKey,
+        campaignTokenAccount: campaignTokenAccount,
+        creatorTokenAccount: creatorTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
@@ -293,16 +298,26 @@ export const cancelCampaign = async (wallet, campaignId) => {
 /**
  * Fetch a specific campaign
  */
-export const fetchCampaign = async (wallet, campaignId, authorPublicKey) => {
+export const fetchCampaign = async (wallet, campaignId) => {
   try {
     const program = initializeProgram(wallet);
-    const campaignPDA = await getCampaignPDA(campaignId);
+    const campaignPubkey = new PublicKey(campaignId);
 
     // Fetch the campaign account
-    const campaignAccount = await program.account.campaign.fetch(campaignPDA);
+    const campaignAccount = await program.account.campaign.fetch(campaignPubkey);
 
     // Format campaign data for UI
-    return formatCampaignData(campaignAccount, campaignId, wallet.publicKey.toString());
+    return {
+      publicKey: campaignPubkey,
+      creator: campaignAccount.creator.toString(),
+      title: campaignAccount.title,
+      description: campaignAccount.description,
+      goalAmount: campaignAccount.goalAmount.toNumber() / LAMPORTS_PER_SOL,
+      amountRaised: campaignAccount.amountRaised.toNumber() / LAMPORTS_PER_SOL,
+      deadline: new Date(campaignAccount.deadline.toNumber() * 1000),
+      isActive: campaignAccount.isActive,
+      isCreator: campaignAccount.creator.toString() === wallet.publicKey.toString()
+    };
   } catch (error) {
     console.error('Error fetching campaign:', error);
     throw error;
@@ -327,8 +342,18 @@ export const fetchAllCampaigns = async (wallet) => {
     const campaignAccounts = await program.account.campaign.all();
 
     // Format campaign data for UI
-    const campaigns = campaignAccounts.map((account, index) => {
-      return formatCampaignData(account.account, index, wallet.publicKey.toString());
+    const campaigns = campaignAccounts.map((account) => {
+      return {
+        publicKey: account.publicKey,
+        creator: account.account.creator.toString(),
+        title: account.account.title,
+        description: account.account.description,
+        goalAmount: account.account.goalAmount.toNumber() / LAMPORTS_PER_SOL,
+        amountRaised: account.account.amountRaised.toNumber() / LAMPORTS_PER_SOL,
+        deadline: new Date(account.account.deadline.toNumber() * 1000),
+        isActive: account.account.isActive,
+        isCreator: account.account.creator.toString() === wallet.publicKey.toString()
+      };
     });
 
     // Update cache
@@ -345,7 +370,7 @@ export const fetchAllCampaigns = async (wallet) => {
 /**
  * Fetch campaigns created by the user
  */
-export const fetchUserCampaigns = async (wallet, userPublicKey) => {
+export const fetchUserCampaigns = async (wallet) => {
   const currentTime = Date.now();
 
   // Check if we have a valid cache
@@ -356,19 +381,29 @@ export const fetchUserCampaigns = async (wallet, userPublicKey) => {
   try {
     const program = initializeProgram(wallet);
 
-    // Fetch campaigns by author
+    // Fetch campaigns by creator (filter by the creator field)
     const campaignAccounts = await program.account.campaign.all([
       {
         memcmp: {
-          offset: 8, // offset for the author field
-          bytes: userPublicKey
+          offset: 8, // offset for the creator field (after the discriminator)
+          bytes: wallet.publicKey.toBase58()
         }
       }
     ]);
 
     // Format campaign data for UI
-    const campaigns = campaignAccounts.map((account, index) => {
-      return formatCampaignData(account.account, index, userPublicKey);
+    const campaigns = campaignAccounts.map((account) => {
+      return {
+        publicKey: account.publicKey,
+        creator: account.account.creator.toString(),
+        title: account.account.title,
+        description: account.account.description,
+        goalAmount: account.account.goalAmount.toNumber() / LAMPORTS_PER_SOL,
+        amountRaised: account.account.amountRaised.toNumber() / LAMPORTS_PER_SOL,
+        deadline: new Date(account.account.deadline.toNumber() * 1000),
+        isActive: account.account.isActive,
+        isCreator: true // This is always true for user campaigns
+      };
     });
 
     // Update cache
@@ -380,34 +415,6 @@ export const fetchUserCampaigns = async (wallet, userPublicKey) => {
     console.error('Error fetching user campaigns:', error);
     return [];
   }
-};
-
-/**
- * Format raw campaign data for UI
- */
-const formatCampaignData = (campaignAccount, id, userPublicKey) => {
-  // Convert lamports to SOL
-  const goalAmount = campaignAccount.goalAmount.toNumber() / LAMPORTS_PER_SOL;
-  const raisedAmount = campaignAccount.raisedAmount.toNumber() / LAMPORTS_PER_SOL;
-
-  // Map status number to string
-  const statusMap = ['active', 'funded', 'completed', 'cancelled'];
-  const status = statusMap[campaignAccount.status];
-
-  return {
-    id,
-    name: campaignAccount.name,
-    description: campaignAccount.description,
-    author: campaignAccount.author.toString(),
-    isAuthor: campaignAccount.author.toString() === userPublicKey,
-    goalAmount,
-    raisedAmount,
-    contributorsCount: campaignAccount.contributorsCount,
-    createdAt: new Date(campaignAccount.createdAt.toNumber()),
-    deadline: new Date(campaignAccount.deadline.toNumber()),
-    status,
-    imageUrl: campaignAccount.imageUrl,
-  };
 };
 
 export default {
