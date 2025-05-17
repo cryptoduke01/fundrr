@@ -8,7 +8,6 @@ import {
   User,
   Settings,
   LogOut,
-  Sparkles,
   Menu,
   X,
   Home,
@@ -69,12 +68,12 @@ const Sidebar = ({ onNavigate, currentItem, isLoading }) => {
       >
         <div className="p-4 md:p-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Fundrr Logo" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
+            {/* <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
               Fundrr
-            </h1>
+            </h1> */}
           </div>
         </div>
 
@@ -111,7 +110,7 @@ const Sidebar = ({ onNavigate, currentItem, isLoading }) => {
             whileTap={{ scale: 0.98 }}
           >
             <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+            <span>Disconnect</span>
           </motion.button>
         </div>
       </div>

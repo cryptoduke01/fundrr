@@ -206,6 +206,21 @@ const CampaignDetails = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column - Campaign image and details */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Campaign Image */}
+          {campaign.imageUrl && (
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50">
+              <img
+                src={campaign.imageUrl}
+                alt={campaign.title}
+                className="w-full h-64 object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://placehold.co/600x400?text=Image+Not+Available';
+                }}
+              />
+            </div>
+          )}
+
           <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
             <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
               About This Campaign

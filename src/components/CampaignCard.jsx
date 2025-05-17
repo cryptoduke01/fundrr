@@ -33,6 +33,19 @@ const CampaignCard = ({ campaign }) => {
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      {campaign.imageUrl && (
+        <div className="w-full h-40 overflow-hidden">
+          <img
+            src={campaign.imageUrl}
+            alt={campaign.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://placehold.co/600x400?text=Image+Not+Available';
+            }}
+          />
+        </div>
+      )}
       <CardHeader className="pb-2">
         <CardTitle className="line-clamp-1">{campaign.title}</CardTitle>
       </CardHeader>

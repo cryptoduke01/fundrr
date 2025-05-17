@@ -58,7 +58,8 @@ const createDemoCampaign = (wallet, campaignData, deadline) => {
     deadline: deadline,
     isActive: true,
     isCreator: true,
-    contributions: []
+    contributions: [],
+    imageUrl: campaignData.imageUrl
   };
   DEMO_CAMPAIGNS.set(campaignId, campaign);
   return { campaignId, campaign };

@@ -52,7 +52,7 @@ const Profile = () => {
         // Get user's campaigns
         const campaigns = await fetchUserCampaigns(program, publicKey);
         setUserCampaigns(campaigns);
-      } catch (error) {
+        } catch (error) {
         console.error("Error fetching profile data:", error);
       } finally {
         setLoading(false);
@@ -130,7 +130,7 @@ const Profile = () => {
                     </Button>
                   </div>
                 </div>
-              </div>
+        </div>
 
               <div>
                 <div className="text-sm text-gray-500 mb-1">Balance</div>
@@ -143,7 +143,7 @@ const Profile = () => {
                   <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
                   <span>Solana Devnet</span>
                 </div>
-              </div>
+          </div>
 
               <Button
                 className="w-full"

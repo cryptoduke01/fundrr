@@ -229,12 +229,12 @@ const App = () => {
                   transition={{ delay: 0.3, type: 'spring', stiffness: 120 }}
                   className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"
                 >
-                  <img src="/logo.jpg" alt="Fundrr Logo" className="h-16 w-16" />
+                  <img src="/logo.png" alt="Fundrr Logo" className="h-16 w-16" />
                 </motion.div>
 
                 <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-                  Welcome to Fundrr
-                </h1>e
+                  Solana Powered Funding for Web3 Creatives
+                </h1>
                 <p className="text-muted-foreground mb-6">
                   Fundrr uses Solana for fast and low-cost transactions
                 </p>
