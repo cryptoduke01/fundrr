@@ -1,141 +1,216 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
-// import Header from '../components/Header';
-import { toast } from 'react-hot-toast';
+import { Search, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import { useProgram } from '../contexts/ProgramContext';
 import { fetchAllCampaigns } from '../utils/programHelpers';
+import { motion } from 'framer-motion';
 
 const DiscoverCampaigns = () => {
-  const { publicKey, connected } = useWallet();
+  const { publicKey } = useWallet();
   const navigate = useNavigate();
   const program = useProgram();
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // all, active, ended
 
   useEffect(() => {
-  const loadCampaigns = async () => {
-    try {
-        if (program && publicKey) {
-          const campaignData = await fetchAllCampaigns(program, publicKey);
-      setCampaigns(campaignData);
+    const loadCampaigns = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!program) {
+          setError('Program not initialized. Please ensure your wallet is connected and the program is deployed.');
+          setIsLoading(false);
+          return;
         }
-    } catch (error) {
-      console.error('Error loading campaigns:', error);
-      toast.error('Failed to load campaigns');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+        if (!publicKey) {
+          setError('Wallet not connected');
+          setIsLoading(false);
+          return;
+        }
+
+        const campaignData = await fetchAllCampaigns(program, publicKey);
+        setCampaigns(campaignData);
+      } catch (error) {
+        console.error('Error loading campaigns:', error);
+        setError(error.message || 'Failed to load campaigns. Make sure the program is deployed to devnet.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
     if (program && publicKey) {
       loadCampaigns();
+    } else if (!publicKey) {
+      setIsLoading(false);
     }
   }, [program, publicKey]);
 
-  const filteredCampaigns = campaigns
-    .filter(campaign => {
-      const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
+  const retryLoad = () => {
+    if (program && publicKey) {
+      const loadCampaigns = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const campaignData = await fetchAllCampaigns(program, publicKey);
+          setCampaigns(campaignData);
+        } catch (error) {
+          console.error('Error loading campaigns:', error);
+          setError(error.message || 'Failed to load campaigns. Make sure the program is deployed to devnet.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadCampaigns();
+    }
+  };
 
-      const isActive = new Date(campaign.deadline) > new Date() && campaign.isActive;
-
-      if (filter === 'active') return matchesSearch && isActive;
-      if (filter === 'ended') return matchesSearch && !isActive;
-      return matchesSearch;
-    })
-    .sort((a, b) => new Date(b.deadline) - new Date(a.deadline));
+  const filteredCampaigns = campaigns.filter(campaign => {
+    const matchesSearch = campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
 
   return (
-    <div className="flex-1">
-      {/* <Header /> */}
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-[#000000] dark:via-[#0a0e27] dark:to-[#000000] p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-10"
+        >
+          <div>
+            <h1 className="text-5xl font-bold mb-3 text-black dark:text-white">
+              Discover Campaigns
+            </h1>
+            <p className="text-gray-600 dark:text-white/60 text-lg">
+              Explore active fundraising campaigns
+            </p>
+          </div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => navigate('/create-campaign')}
+              className="glass-button bg-black dark:bg-white text-white dark:text-black hover:bg-gray-900 dark:hover:bg-gray-100 h-14 px-8 rounded-xl font-semibold text-lg shadow-xl"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Campaign
+            </Button>
+          </motion.div>
+        </motion.div>
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-white">Discover Campaigns</h1>
-          <button
-            onClick={() => navigate('/create-campaign')}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl hover:from-purple-600 hover:to-blue-600 transition-colors"
-          >
-            Create Campaign
-          </button>
-        </div>
+        {/* Search */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <div className="relative">
+            <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search campaigns..."
+              className="glass-card w-full pl-14 pr-5 py-4 rounded-xl text-black dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all text-lg"
+            />
+          </div>
+        </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search campaigns..."
-            className="flex-1 px-4 py-2 bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-          />
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-900/50 backdrop-blur-sm border border-gray-800/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-          >
-            <option value="all">All Campaigns</option>
-            <option value="active">Active</option>
-            <option value="ended">Ended</option>
-          </select>
-        </div>
-
+        {/* Campaigns Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-center">
+              <div className="w-12 h-12 border-3 border-black dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-white/60">Loading campaigns...</p>
+            </div>
           </div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card rounded-2xl p-12 text-center"
+          >
+            <AlertCircle className="w-16 h-16 text-black dark:text-white mx-auto mb-6 opacity-50" />
+            <p className="text-black dark:text-white mb-4 font-semibold text-lg">{error}</p>
+            <p className="text-gray-600 dark:text-white/60 mb-6 text-sm">Make sure the program is deployed: <code className="font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded">2YmiPygdaL7MfnB4otFDchBFd2gdEQnNeeYd4LueJFvu</code></p>
+            <Button
+              onClick={retryLoad}
+              variant="outline"
+              className="rounded-xl border-2 border-black dark:border-white"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </motion.div>
         ) : filteredCampaigns.length === 0 ? (
-          <div className="text-center py-12 bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-800/50">
-            <p className="text-gray-400">No campaigns found</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-card rounded-2xl p-16 text-center"
+          >
+            <p className="text-gray-600 dark:text-white/60 text-lg">No campaigns found</p>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCampaigns.map((campaign) => {
-              const isExpired = new Date(campaign.deadline) < new Date();
+            {filteredCampaigns.map((campaign, index) => {
+              const progress = (campaign.amountRaised / campaign.goalAmount) * 100;
               const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline) - new Date()) / (1000 * 60 * 60 * 24)));
-              const progressPercentage = Math.min(100, (campaign.amountRaised / campaign.goalAmount) * 100);
 
               return (
-                <div
+                <motion.div
                   key={campaign.publicKey.toString()}
-                  className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50 hover:transform hover:scale-[1.02] transition-transform cursor-pointer"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                   onClick={() => navigate(`/campaign/${campaign.publicKey.toString()}`)}
+                  className="glass-card rounded-2xl p-6 hover:shadow-2xl transform transition-all hover:scale-105 cursor-pointer group"
                 >
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-semibold text-white truncate">{campaign.title}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs ${campaign.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                        {campaign.isActive ? 'Active' : 'Ended'}
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-lg font-bold text-black dark:text-white flex-1 group-hover:text-black/80 dark:group-hover:text-white/80 transition-colors">
+                      {campaign.title}
+                    </h3>
+                    <span className={`ml-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                      campaign.isActive
+                        ? 'bg-black/10 dark:bg-white/10 text-black dark:text-white border border-black/20 dark:border-white/20'
+                        : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800'
+                    }`}>
+                      {campaign.isActive ? 'Active' : 'Ended'}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-600 dark:text-white/60 line-clamp-2 mb-6">
+                    {campaign.description}
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-white/60 font-medium">
+                        {campaign.amountRaised.toFixed(2)} / {campaign.goalAmount.toFixed(2)} SOL
+                      </span>
+                      <span className="text-black dark:text-white font-bold">
+                        {progress.toFixed(1)}%
                       </span>
                     </div>
-
-                    <p className="text-gray-400 text-sm line-clamp-2 mb-4">{campaign.description}</p>
-
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-400 mb-1">
-                        <span>Progress ({progressPercentage.toFixed(1)}%)</span>
-                        <span>{campaign.amountRaised.toFixed(2)} / {campaign.goalAmount.toFixed(2)} SOL</span>
-                      </div>
-                      <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
+                    <div className="w-full h-3 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, progress)}%` }}
+                        transition={{ duration: 1, delay: index * 0.1 }}
+                        className="h-full bg-black dark:bg-white rounded-full"
+                      />
                     </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="text-gray-400">
-                        {daysLeft > 0 ? `${daysLeft} days left` : 'Ended'}
-                      </div>
-                      <div className="text-gray-400 font-mono truncate" style={{ maxWidth: '140px' }}>
-                        By: {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}
-                      </div>
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-white/40">
+                      <span>{daysLeft} days left</span>
+                      <span className="font-mono">{campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -145,4 +220,4 @@ const DiscoverCampaigns = () => {
   );
 };
 
-export default DiscoverCampaigns; 
+export default DiscoverCampaigns;

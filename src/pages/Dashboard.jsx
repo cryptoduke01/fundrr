@@ -1,351 +1,269 @@
 import React, { useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import CustomWalletButton from "../components/CustomWalletButton";
-// import Header from '../components/Header';
-import SummaryStats from "../components/SummaryStats";
-import { SummaryCards } from "../components/SummaryCards";
-import { Statistics } from "../components/Statistics";
-import Transactions from "../components/Transactions";
-import { motion, AnimatePresence } from 'framer-motion';
-import { CampaignService } from '../services/campaign';
-import { useAnchorProgram } from '../hooks/useAnchorProgram';
 import { useNavigate } from 'react-router-dom';
-import solanaLogoMark from '../assets/solanaLogoMark.png';
 import { Button } from "../components/ui/button";
-import { LiveUpdates } from "../components/LiveUpdates";
-import { Discover } from "../components/Discover";
-import { Spinner } from '@/components/ui/spinner';
-import { Shield, Coins, Users, Twitter, Github, Globe, Sparkles, Rocket, Lock, ChevronRight, Play, PauseCircle, Heart, Trophy, Target } from 'lucide-react';
+import { Plus, TrendingUp, Wallet, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { fetchAllCampaigns } from '../utils/programHelpers';
+import { useProgram } from '../contexts/ProgramContext';
 
 export function Dashboard() {
   const { connection } = useConnection();
   const wallet = useWallet();
-  const [balance, setBalance] = useState(null);
-  const [solPrice, setSolPrice] = useState(null);
-  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
-  const program = useAnchorProgram();
+  const program = useProgram();
+  const [balance, setBalance] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('about');
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [hoveredFeature, setHoveredFeature] = useState(null);
-
-  const features = [
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: 'Secure & Transparent',
-      description: 'Built on Solana blockchain for maximum security and transparency. Every transaction is recorded and verifiable.',
-      color: 'from-purple-500 to-blue-500',
-      stats: '100% Secure'
-    },
-    {
-      icon: <Coins className="w-6 h-6" />,
-      title: 'Ultra-Low Fees',
-      description: 'Benefit from Solana\'s incredibly low transaction costs. More of your money goes to the causes you care about.',
-      color: 'from-green-500 to-emerald-500',
-      stats: '< $0.01 fees'
-    },
-    {
-      icon: <Rocket className="w-6 h-6" />,
-      title: 'Lightning Fast',
-      description: 'Experience instant settlements and real-time updates. No more waiting for days to see your impact.',
-      color: 'from-orange-500 to-red-500',
-      stats: '< 1 sec finality'
-    },
-    {
-      icon: <Heart className="w-6 h-6" />,
-      title: 'Community Driven',
-      description: 'Join a thriving community of changemakers. Together, we\'re making the world a better place.',
-      color: 'from-pink-500 to-rose-500',
-      stats: '15k+ members'
-    }
-  ];
-
-  const howItWorks = [
-    {
-      icon: <Target className="w-6 h-6 text-purple-500" />,
-      title: 'Create Campaign',
-      description: 'Set up your campaign with a compelling story, funding goal, and timeline.'
-    },
-    {
-      icon: <Users className="w-6 h-6 text-blue-500" />,
-      title: 'Share & Grow',
-      description: 'Share your campaign with the community and watch support grow.'
-    },
-    {
-      icon: <Trophy className="w-6 h-6 text-green-500" />,
-      title: 'Achieve Goals',
-      description: 'Receive funds instantly as supporters contribute to your cause.'
-    }
-  ];
-
-  const recentCampaigns = [
-    {
-      title: 'Ocean Cleanup Initiative',
-      raised: '45,000',
-      goal: '50,000',
-      supporters: 234,
-      category: 'Environment'
-    },
-    {
-      title: 'Tech Education Fund',
-      raised: '28,000',
-      goal: '30,000',
-      supporters: 156,
-      category: 'Education'
-    },
-    {
-      title: 'Community Garden',
-      raised: '12,000',
-      goal: '15,000',
-      supporters: 89,
-      category: 'Community'
-    }
-  ];
-
-  // Fetch SOL price
-  useEffect(() => {
-    const fetchSolPrice = async () => {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
-        const data = await response.json();
-        setSolPrice(data.solana.usd);
-        } catch (error) {
-        console.error("Error fetching SOL price:", error);
-      }
-    };
-    fetchSolPrice();
-    const intervalId = setInterval(fetchSolPrice, 60000); // Update price every minute
-    return () => clearInterval(intervalId);
-  }, []);
+  const [error, setError] = useState(null);
 
   // Fetch wallet balance
   useEffect(() => {
+    if (!wallet.connected || !wallet.publicKey) {
+      setBalance(null);
+      return;
+    }
+
     const fetchBalance = async () => {
-      if (wallet.publicKey) {
-        try {
-          const walletBalance = await connection.getBalance(wallet.publicKey);
-          setBalance(walletBalance / 1_000_000_000); // Convert lamports to SOL
-        } catch (error) {
-          console.error("Error fetching balance:", error);
-        }
+      try {
+        const walletBalance = await connection.getBalance(wallet.publicKey);
+        setBalance(walletBalance / 1_000_000_000);
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+        setBalance(null);
       }
     };
     
-    if (wallet.connected) {
-      fetchBalance();
-      const intervalId = setInterval(fetchBalance, 30000);
-      return () => clearInterval(intervalId);
-    }
-  }, [connection, wallet.publicKey, wallet.connected]);
+    fetchBalance();
+    const intervalId = setInterval(fetchBalance, 30000);
+    return () => clearInterval(intervalId);
+  }, [connection, wallet.publicKey?.toString(), wallet.connected]);
 
+  // Fetch campaigns
   useEffect(() => {
-    // Simulate loading time
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleCopyAddress = async () => {
-    if (wallet.publicKey) {
+    const loadCampaigns = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        await navigator.clipboard.writeText(wallet.publicKey.toString());
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy address:', err);
+        if (!program) {
+          setError('Program not initialized. Please ensure your wallet is connected and the program is deployed.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!wallet.publicKey) {
+          setError('Wallet not connected');
+          setIsLoading(false);
+          return;
+        }
+
+        const campaignData = await fetchAllCampaigns(program, wallet.publicKey);
+        setCampaigns(campaignData);
+      } catch (error) {
+        console.error('Error loading campaigns:', error);
+        setError(error.message || 'Failed to load campaigns. Make sure the program is deployed to devnet.');
+      } finally {
+        setIsLoading(false);
       }
+    };
+
+    if (program && wallet.publicKey) {
+      loadCampaigns();
+    } else if (!wallet.connected) {
+      setIsLoading(false);
+    }
+  }, [program, wallet.publicKey, wallet.connected]);
+
+  const retryLoad = () => {
+    if (program && wallet.publicKey) {
+      const loadCampaigns = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const campaignData = await fetchAllCampaigns(program, wallet.publicKey);
+          setCampaigns(campaignData);
+        } catch (error) {
+          console.error('Error loading campaigns:', error);
+          setError(error.message || 'Failed to load campaigns. Make sure the program is deployed to devnet.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadCampaigns();
     }
   };
 
-  if (!wallet.connected) {
-    return (
-      <div className="min-h-screen bg-[#0A0F1D] relative overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-slate-900/20" />
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        </div>
-
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
-          {/* Logo and Welcome */}
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mb-8"
-          >
-            <Sparkles className="w-8 h-8 text-white" />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
-          >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
-              Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">Fundrr</span>
-            </h1>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              The next generation of decentralized crowdfunding on Solana.
-              Fast, secure, and transparent.
-            </p>
-          </motion.div>
-
-          {/* Stats Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl w-full mb-12"
-          >
-            {[
-              { value: '$2.5M+', label: 'Total Raised' },
-              { value: '15k+', label: 'Contributors' },
-              { value: '500+', label: 'Campaigns' },
-              { value: '98%', label: 'Success Rate' }
-            ].map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-                className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm text-center"
-              >
-                <div className="text-2xl font-bold text-purple-500">{stat.value}</div>
-                <div className="text-sm text-slate-400">{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Features */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full mb-12"
-          >
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm"
-              >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4`}>
-                  {feature.icon}
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-slate-400 text-sm mb-4">{feature.description}</p>
-                <div className="text-sm font-medium text-purple-500">{feature.stats}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Connect Wallet Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="text-center space-y-6"
-          >
-            <CustomWalletButton />
-
-            <div className="flex items-center justify-center gap-6 mt-8">
-              <a href="https://twitter.com/fundrr" target="_blank" rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-500 transition-all duration-200 text-slate-400">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="https://github.com/fundrr" target="_blank" rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-500 transition-all duration-200 text-slate-400">
-                <Github className="w-5 h-5" />
-              </a>
-              <a href="https://fundrr.io" target="_blank" rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-500 transition-all duration-200 text-slate-400">
-                <Globe className="w-5 h-5" />
-              </a>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  const shortAddress = wallet.publicKey ? `${wallet.publicKey.toString().slice(0, 6)}...${wallet.publicKey.toString().slice(-6)}` : '';
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <Spinner size="xl" className="mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-white mb-2">Loading Dashboard</h2>
-          <p className="text-slate-400">Fetching your crowdfunding data...</p>
-        </motion.div>
-      </div>
-    );
-  }
+  const totalRaised = campaigns.reduce((sum, c) => sum + c.amountRaised, 0);
+  const activeCampaigns = campaigns.filter(c => c.isActive).length;
 
   return (
-    <div className="relative overflow-x-hidden">
-      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 max-w-[1400px] mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-[#000000] dark:via-[#0a0e27] dark:to-[#000000] p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div
+          className="flex items-center justify-between mb-10"
+        >
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">
+            <h1 className="text-5xl font-bold mb-3 text-black dark:text-white">
               Dashboard
             </h1>
-            <p className="mt-1 text-sm sm:text-base text-slate-400">
-              Track your fundraising progress and impact
+            <p className="text-gray-600 dark:text-white/60 text-lg">
+              Overview of your fundraising activity
             </p>
           </div>
           <Button
             onClick={() => navigate("/create-campaign")}
-            className="bg-blue-600 hover:bg-blue-700 transition-all duration-200 text-sm sm:text-base py-2.5 sm:py-3 font-medium"
+            className="glass-button bg-black dark:bg-white text-white dark:text-black hover:bg-gray-900 dark:hover:bg-gray-100 h-14 px-8 rounded-xl font-semibold text-lg shadow-xl"
           >
+            <Plus className="w-5 h-5 mr-2" />
             Create Campaign
           </Button>
         </div>
 
-        <div className="flex items-center gap-4 text-sm mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span className="text-slate-400">Balance: {balance?.toFixed(2) || '0.00'} SOL</span>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div
+            className="glass-card rounded-2xl p-8 cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-white/60 uppercase tracking-wide">Wallet Balance</p>
+              <div className="p-3 rounded-xl bg-black/10 dark:bg-white/10">
+                <Wallet className="w-6 h-6 text-black dark:text-white" />
               </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-slate-400">Contributed: {balance?.toFixed(2) || '0.00'} SOL</span>
+            </div>
+            <p className="text-4xl font-bold text-black dark:text-white">
+              {balance?.toFixed(2) || '0.00'} SOL
+            </p>
+          </div>
+
+          <div
+            className="glass-card rounded-2xl p-8 cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-white/60 uppercase tracking-wide">Total Raised</p>
+              <div className="p-3 rounded-xl bg-black/10 dark:bg-white/10">
+                <TrendingUp className="w-6 h-6 text-black dark:text-white" />
               </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-purple-500" />
-            <span className="text-slate-400">Received: {balance?.toFixed(2) || '0.00'} SOL</span>
+            </div>
+            <p className="text-4xl font-bold text-black dark:text-white">
+              {totalRaised.toFixed(2)} SOL
+            </p>
+          </div>
+
+          <div
+            className="glass-card rounded-2xl p-8 cursor-pointer"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-600 dark:text-white/60 uppercase tracking-wide">Active Campaigns</p>
+              <div className="p-3 rounded-xl bg-black/10 dark:bg-white/10">
+                <Clock className="w-6 h-6 text-black dark:text-white" />
+              </div>
+            </div>
+            <p className="text-4xl font-bold text-black dark:text-white">
+              {activeCampaigns}
+            </p>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8">
-              <SummaryCards />
-            </div>
 
-          <div className="lg:col-span-4">
-              <Transactions />
-            </div>
+        {/* Campaigns List */}
+        <div
+          className="glass-card rounded-2xl overflow-hidden"
+        >
+          <div className="p-8 border-b border-black/10 dark:border-white/10">
+            <h2 className="text-2xl font-bold text-black dark:text-white">
+              Your Campaigns
+            </h2>
           </div>
+          
+          {isLoading ? (
+            <div className="p-16 text-center">
+              <div className="inline-block w-12 h-12 border-3 border-black dark:border-white border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-600 dark:text-white/60">Loading campaigns...</p>
+            </div>
+          ) : error ? (
+            <div className="p-16 text-center">
+              <AlertCircle className="w-16 h-16 text-black dark:text-white mx-auto mb-6 opacity-50" />
+              <p className="text-black dark:text-white mb-4 font-semibold text-lg">{error}</p>
+              <p className="text-gray-600 dark:text-white/60 mb-6 text-sm">Make sure the program is deployed: <code className="font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded">2YmiPygdaL7MfnB4otFDchBFd2gdEQnNeeYd4LueJFvu</code></p>
+              <Button
+                onClick={retryLoad}
+                variant="outline"
+                className="rounded-xl border-2 border-black dark:border-white"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-black/10 dark:bg-white/10 flex items-center justify-center">
+                <Plus className="w-10 h-10 text-black dark:text-white" />
+              </div>
+              <p className="text-gray-600 dark:text-white/60 mb-6 text-lg">No campaigns yet</p>
+              <Button
+                onClick={() => navigate("/create-campaign")}
+                className="bg-black dark:bg-white text-white dark:text-black rounded-xl px-8"
+              >
+                Create your first campaign
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y divide-black/5 dark:divide-white/5">
+              {campaigns.map((campaign, index) => {
+                const progress = (campaign.amountRaised / campaign.goalAmount) * 100;
+                const daysLeft = Math.max(0, Math.ceil((new Date(campaign.deadline) - new Date()) / (1000 * 60 * 60 * 24)));
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-          <div className="lg:col-span-8">
-            <Statistics />
-                </div>
+                return (
+                  <div
+                    key={campaign.publicKey.toString()}
+                    onClick={() => navigate(`/campaign/${campaign.publicKey.toString()}`)}
+                    className="p-8 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-all group"
+                  >
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-black dark:text-white mb-2 group-hover:text-black/80 dark:group-hover:text-white/80 transition-colors">
+                          {campaign.title}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-white/60 line-clamp-2">
+                          {campaign.description}
+                        </p>
+                      </div>
+                      <span className={`ml-4 px-4 py-2 rounded-full text-xs font-semibold ${
+                        campaign.isActive
+                          ? 'bg-black/10 dark:bg-white/10 text-black dark:text-white border border-black/20 dark:border-white/20'
+                          : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800'
+                      }`}>
+                        {campaign.isActive ? 'Active' : 'Ended'}
+                      </span>
+                    </div>
 
-          <div className="lg:col-span-4">
-            <LiveUpdates />
-          </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-white/60 font-medium">
+                          {campaign.amountRaised.toFixed(2)} / {campaign.goalAmount.toFixed(2)} SOL
+                        </span>
+                        <span className="text-black dark:text-white font-bold">
+                          {progress.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="w-full h-3 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${Math.min(100, progress)}%` }}
+                          className="h-full bg-black dark:bg-white rounded-full transition-all duration-300"
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-white/40">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {daysLeft} days left
+                        </span>
+                        <span className="font-mono">By {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

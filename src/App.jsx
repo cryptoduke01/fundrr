@@ -1,9 +1,9 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { Zap, ArrowRight } from 'lucide-react';
 
 // Import pages
 import Dashboard from './pages/Dashboard';
@@ -11,13 +11,9 @@ import CreateCampaign from './pages/CreateCampaign';
 import CampaignDetails from './pages/CampaignDetails';
 import DiscoverCampaigns from './pages/DiscoverCampaigns';
 import MyCampaigns from './pages/MyCampaigns';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
 
 // Import components
 import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import CustomWalletButton from './components/CustomWalletButton';
 
 // Create AppSettings context
 export const AppSettingsContext = createContext({
@@ -31,26 +27,10 @@ export const AppSettingsContext = createContext({
   setAutoLockTimer: () => { },
 });
 
-// Loading Spinner Component
-const LoadingSpinner = ({ itemName, message }) => {
-  const { reduceAnimations } = useContext(AppSettingsContext);
-  return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#0A0F1C] z-50">
-      <div className={`w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full ${reduceAnimations ? '' : 'animate-spin'}`}></div>
-      <h2 className="mt-4 text-xl font-medium text-white">Loading {itemName}</h2>
-      <p className="mt-2 text-sm text-gray-400">{message}</p>
-    </div>
-  );
-};
-
 const App = () => {
   const { connected, disconnect } = useWallet();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingItem, setLoadingItem] = useState('');
-  const [loadingMessage, setLoadingMessage] = useState('');
-  const [showContent, setShowContent] = useState(false);
   const [currentPage, setCurrentPage] = useState('Dashboard');
 
   // App settings
@@ -70,7 +50,6 @@ const App = () => {
     const savedTimer = localStorage.getItem('autoLockTimer');
     return savedTimer ? parseInt(savedTimer) : 10;
   });
-  const [autoLockTimerId, setAutoLockTimerId] = useState(null);
 
   // Persist settings in localStorage
   useEffect(() => {
@@ -101,104 +80,6 @@ const App = () => {
     }
   }, [theme]);
 
-  // Auto-disconnect wallet timer
-  useEffect(() => {
-    if (!connected) return;
-
-    if (autoLockTimerId) {
-      clearTimeout(autoLockTimerId);
-    }
-
-    const timerId = setTimeout(() => {
-      disconnect();
-      console.log('Auto-disconnected wallet after', autoLockTimer, 'minutes');
-    }, autoLockTimer * 60 * 1000);
-
-    setAutoLockTimerId(timerId);
-
-    return () => {
-      if (autoLockTimerId) {
-        clearTimeout(autoLockTimerId);
-      }
-    };
-  }, [autoLockTimer, disconnect, connected]);
-
-  // Reset timer on user activity
-  useEffect(() => {
-    if (!connected) return;
-
-    const resetTimer = () => {
-      if (autoLockTimerId) {
-        clearTimeout(autoLockTimerId);
-        const timerId = setTimeout(() => {
-          disconnect();
-          console.log('Auto-disconnected wallet after', autoLockTimer, 'minutes');
-        }, autoLockTimer * 60 * 1000);
-        setAutoLockTimerId(timerId);
-      }
-    };
-
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    window.addEventListener('click', resetTimer);
-    window.addEventListener('scroll', resetTimer);
-
-    return () => {
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      window.removeEventListener('click', resetTimer);
-      window.removeEventListener('scroll', resetTimer);
-    };
-  }, [autoLockTimer, autoLockTimerId, disconnect, connected]);
-
-  const getLoadingMessage = (path) => {
-    switch (path) {
-      case '/discover':
-        return 'Fetching available campaigns...';
-      case '/create-campaign':
-        return 'Preparing campaign creation form...';
-      case '/profile':
-        return 'Loading your profile data...';
-      case '/settings':
-        return 'Loading your preferences...';
-      case '/my-campaigns':
-        return 'Fetching your campaign history...';
-      case '/campaign/e:id':
-        return 'Loading campaign details...';
-      default:
-        return 'Loading...';
-    }
-  };
-
-  // Handle navigation with loading state
-  const handleNavigation = (path, itemName) => {
-    // Don't show loading for any pages - just navigate directly
-    navigate(path);
-  };
-
-  // Reset loading state after navigation
-  useEffect(() => {
-    // For all routes, show content immediately
-    setShowContent(true);
-    setIsLoading(false);
-    setLoadingItem('');
-    setLoadingMessage('');
-  }, [location.pathname]);
-
-  // Initial setup
-  useEffect(() => {
-    const currentPath = location.pathname;
-    if (currentPath === '/') {
-      setShowContent(true);
-    } else {
-      setShowContent(false);
-      setIsLoading(true);
-      const pageName = currentPath.split('/')[1];
-      setLoadingItem(pageName.charAt(0).toUpperCase() + pageName.slice(1));
-      setLoadingMessage(getLoadingMessage(currentPath));
-    }
-  }, []);
-
   // Create settings context value
   const settingsContextValue = {
     theme,
@@ -214,59 +95,92 @@ const App = () => {
   if (!connected) {
     return (
       <AppSettingsContext.Provider value={settingsContextValue}>
-        <div className="min-h-screen bg-background text-foreground">
-          <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8">
+        <div className="min-h-screen bg-gradient-to-br from-[#0a0e27] via-[#1a1f3a] to-[#0a0e27] dark:from-[#000000] dark:via-[#0a0a0a] dark:to-[#000000] flex items-center justify-center p-6 relative overflow-hidden">
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl float-animation"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl float-animation" style={{ animationDelay: '2s' }}></div>
+            <div className="absolute top-1/2 right-1/3 w-72 h-72 bg-white/3 rounded-full blur-3xl float-animation" style={{ animationDelay: '4s' }}></div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="max-w-lg w-full relative z-10"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <motion.div
+                initial={{ rotate: -180, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+                className="inline-block mb-6"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
+                  <Zap className="w-10 h-10 text-white" />
+                </div>
+              </motion.div>
+              <h1 className="text-6xl font-bold mb-4 gradient-text dark:text-white">
+                Fundrr
+              </h1>
+              <p className="text-xl text-white/80 dark:text-white/60 font-light">
+                Decentralized crowdfunding on Solana
+              </p>
+            </motion.div>
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="max-w-md w-full rounded-2xl overflow-hidden shadow-xl"
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="glass-card rounded-3xl p-10 shadow-2xl border border-white/20"
             >
-              <div className="bg-card p-6 sm:p-8 text-center">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white mb-2">Connect Wallet</h2>
+                  <p className="text-white/60 text-sm">Connect your Solana wallet to get started</p>
+                </div>
+                
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3, type: 'spring', stiffness: 120 }}
-                  className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="relative"
                 >
-                  <img src="/logo.png" alt="Fundrr Logo" className="h-16 w-16" />
+                  <WalletMultiButton className="!w-full !justify-center !h-14 !rounded-xl !bg-white/10 hover:!bg-white/15 !text-white !font-medium !transition-all !shadow-lg !backdrop-blur-xl !border !border-white/20 hover:!border-white/30" />
                 </motion.div>
 
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-                  Solana Powered Funding for Web3 Creatives
-                </h1>
-                <p className="text-muted-foreground mb-6">
-                  Fundrr uses Solana for fast and low-cost transactions
-                </p>
-
-                <div className="mb-8">
-                  <WalletMultiButton className="!bg-primary hover:!bg-primary/90 !rounded-lg !py-2 !px-4 !w-full !justify-center" />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Connect your wallet to start fundraising
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="bg-background p-3 rounded-lg">
-                    <div className="font-bold text-xl">Fast</div>
-                    <p className="text-muted-foreground text-sm">Near-instant transactions</p>
-                  </div>
-                  <div className="bg-background p-3 rounded-lg">
-                    <div className="font-bold text-xl">Secure</div>
-                    <p className="text-muted-foreground text-sm">Built on Solana blockchain</p>
-                  </div>
-                  <div className="bg-background p-3 rounded-lg">
-                    <div className="font-bold text-xl">Low Fees</div>
-                    <p className="text-muted-foreground text-sm">Minimal transaction costs</p>
-                  </div>
-                  <div className="bg-background p-3 rounded-lg">
-                    <div className="font-bold text-xl">Global</div>
-                    <p className="text-muted-foreground text-sm">Borderless fundraising</p>
+                <div className="pt-6 border-t border-white/10">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="space-y-1">
+                      <div className="text-2xl font-bold text-white">Fast</div>
+                      <p className="text-xs text-white/50">Instant</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-2xl font-bold text-white">Secure</div>
+                      <p className="text-xs text-white/50">Blockchain</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-2xl font-bold text-white">Low Fee</div>
+                      <p className="text-xs text-white/50">Minimal</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </motion.div>
-          </div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="mt-8 text-center"
+            >
+              <p className="text-white/40 text-sm">Powered by Solana</p>
+            </motion.div>
+          </motion.div>
         </div>
       </AppSettingsContext.Provider>
     );
@@ -274,23 +188,19 @@ const App = () => {
 
   return (
     <AppSettingsContext.Provider value={settingsContextValue}>
-      <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-        <div className="flex flex-col md:flex-row h-screen">
+      <div className="min-h-screen bg-white dark:bg-[#000000]">
+        <div className="flex h-screen">
           <Sidebar
             onNavigate={(item) => {
               setCurrentPage(item);
               navigate(item);
             }}
             currentItem={currentPage}
-            isLoading={isLoading}
+            isLoading={false}
           />
-          <div className="flex-1 overflow-y-auto transition-all duration-200">
+          <div className="flex-1 overflow-y-auto">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-
-              {/* Campaign routes */}
               <Route path="/discover" element={<DiscoverCampaigns />} />
               <Route path="/my-campaigns" element={<MyCampaigns />} />
               <Route path="/campaign/:id" element={<CampaignDetails />} />

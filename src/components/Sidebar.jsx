@@ -63,22 +63,17 @@ const Sidebar = ({ onNavigate, currentItem, isLoading }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed md:relative w-64 md:w-64 h-screen bg-[#0A0F1C] flex flex-col border-r border-gray-800/30 z-40 transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-full md:left-0'
+        className={`fixed md:relative w-64 h-screen glass-card flex flex-col border-r border-gray-200/50 dark:border-gray-800/50 z-40 transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-full md:left-0'
           }`}
       >
-        <div className="p-4 md:p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Fundrr Logo" className="w-full h-full object-cover" />
-            </div>
-            {/* <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500">
-              Fundrr
-            </h1> */}
-          </div>
+        <div className="p-6">
+          <h1 className="text-2xl font-bold text-black dark:text-white">
+            Fundrr
+          </h1>
         </div>
 
-        <nav className="flex-1 px-3 md:px-4 overflow-y-auto">
-          {sidebarItems.map((item) => {
+        <nav className="flex-1 px-4 overflow-y-auto">
+          {sidebarItems.filter(item => !['Profile', 'Settings'].includes(item.name)).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
@@ -86,28 +81,27 @@ const Sidebar = ({ onNavigate, currentItem, isLoading }) => {
               <motion.button
                 key={item.path}
                 onClick={() => handleNavigation(item.path, item.name)}
-                className={`w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl mb-2 transition-all duration-200 ${isActive
-                  ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-white border border-purple-500/20'
-                  : 'text-gray-400 hover:bg-gray-800/50 hover:text-white'
-                  }`}
-                whileHover={{ scale: 1.02, x: 4 }}
+                whileHover={{ x: 4 }}
                 whileTap={{ scale: 0.98 }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all duration-200 ${
+                  isActive
+                    ? 'bg-black dark:bg-white text-white dark:text-black font-semibold shadow-lg'
+                    : 'text-gray-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-black dark:hover:text-white'
+                }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-purple-500' : ''}`} />
-                <span className={isActive ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 font-medium' : ''}>
-                  {item.name}
-                </span>
+                <Icon className="w-5 h-5" />
+                <span>{item.name}</span>
               </motion.button>
             );
           })}
         </nav>
 
-        <div className="p-3 md:p-4 border-t border-gray-800/30">
+        <div className="p-4 border-t border-black/10 dark:border-white/10">
           <motion.button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all duration-200"
-            whileHover={{ scale: 1.02, x: 4 }}
+            whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 hover:text-black dark:hover:text-white transition-colors"
           >
             <LogOut className="w-5 h-5" />
             <span>Disconnect</span>

@@ -1,82 +1,37 @@
-import { PublicKey, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 
-// DEMO MODE: Mock campaign data cache for the demo
-const DEMO_CAMPAIGNS = new Map();
-// Transaction history for the connected wallet
-const TRANSACTION_HISTORY = new Map();
-let CAMPAIGN_COUNTER = 0;
+// Program ID from the deployed contract
+const PROGRAM_ID = new PublicKey('2YmiPygdaL7MfnB4otFDchBFd2gdEQnNeeYd4LueJFvu');
 
-// Helper to add a transaction to history
-const recordTransaction = (walletAddress, type, data, signature) => {
-  if (!walletAddress) return;
-
-  const walletKey = walletAddress.toString();
-  const walletHistory = TRANSACTION_HISTORY.get(walletKey) || [];
-
-  walletHistory.push({
-    id: `tx-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    type,
-    data,
-    signature,
-    timestamp: new Date(),
-  });
-
-  // Limit history size
-  if (walletHistory.length > 50) {
-    walletHistory.shift();
-  }
-
-  TRANSACTION_HISTORY.set(walletKey, walletHistory);
-};
-
-// Helper to get transaction history for a wallet
-export const getTransactionHistory = (walletAddress) => {
-  if (!walletAddress) return [];
-
-  const walletKey = walletAddress.toString();
-  return TRANSACTION_HISTORY.get(walletKey) || [];
-};
-
-// Demo helper to generate a unique ID
-const generateDemoId = () => {
-  // Generate a real Solana keypair to ensure it's a valid base58 string
-  const keypair = Keypair.generate();
-  return keypair.publicKey.toString();
-};
-
-// Demo helper to create a campaign object
-const createDemoCampaign = (wallet, campaignData, deadline) => {
-  const campaignId = generateDemoId();
-  const campaign = {
-    publicKey: new PublicKey(campaignId),
-    creator: wallet.publicKey.toString(),
-    title: campaignData.name,
-    description: campaignData.description,
-    goalAmount: campaignData.goalAmount,
-    amountRaised: 0,
-    deadline: deadline,
-    isActive: true,
-    isCreator: true,
-    contributions: [],
-    imageUrl: campaignData.imageUrl
-  };
-  DEMO_CAMPAIGNS.set(campaignId, campaign);
-  return { campaignId, campaign };
+// Helper to find campaign PDA (matches Rust program structure)
+const findCampaignPDA = async (creator) => {
+  const [campaignPDA, bump] = await PublicKey.findProgramAddress(
+    [Buffer.from('campaign'), creator.toBuffer()],
+    PROGRAM_ID
+  );
+  return { campaignPDA, bump };
 };
 
 /**
  * Creates a new campaign
  * @param {Object} program - Anchor program instance
- * @param {Object} wallet - Connected wallet
- * @param {Object} campaignData - Campaign data (title, description, etc.)
+ * @param {Object} wallet - Connected wallet with publicKey
+ * @param {Object} campaignData - Campaign data (name, description, goalAmount, duration)
  */
 export const createCampaign = async (program, wallet, campaignData) => {
   try {
+    if (!program || !wallet.publicKey) {
+      throw new Error('Program or wallet not available');
+    }
+
     // Calculate deadline
     const now = new Date();
     const deadline = new Date(now);
     deadline.setDate(now.getDate() + parseInt(campaignData.duration));
+
+    // Find campaign PDA
+    const { campaignPDA, bump } = await findCampaignPDA(wallet.publicKey);
 
     // Create campaign using the program interface
     const tx = await program.methods
@@ -86,32 +41,23 @@ export const createCampaign = async (program, wallet, campaignData) => {
         new anchor.BN(campaignData.goalAmount * LAMPORTS_PER_SOL), // Convert to lamports
         new anchor.BN(Math.floor(deadline.getTime() / 1000)) // Unix timestamp
       )
+      .accounts({
+        campaign: campaignPDA,
+        creator: wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
       .rpc();
-
-    // DEMO MODE: Create campaign in local storage for demo
-    const { campaignId, campaign } = createDemoCampaign(wallet, campaignData, deadline);
-
-    // Record transaction in history
-    recordTransaction(wallet.publicKey, 'campaign_created', {
-      campaignId,
-      name: campaignData.name,
-      goalAmount: campaignData.goalAmount,
-      fee: 0.01
-    }, tx);
-
-    // Increment counter for UI refresh
-    CAMPAIGN_COUNTER++;
 
     return {
       success: true,
-      campaignId: campaignId,
+      campaignId: campaignPDA.toString(),
       txSignature: tx,
     };
   } catch (error) {
     console.error('Error creating campaign:', error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'Failed to create campaign',
     };
   }
 };
@@ -119,36 +65,28 @@ export const createCampaign = async (program, wallet, campaignData) => {
 /**
  * Contribute to a campaign
  * @param {Object} program - Anchor program instance
- * @param {Object} wallet - Connected wallet
- * @param {string} campaignId - Campaign ID (public key)
- * @param {number} amount - Contribution amount
+ * @param {Object} wallet - Connected wallet with publicKey
+ * @param {string} campaignId - Campaign PDA (public key)
+ * @param {number} amount - Contribution amount in SOL
  */
 export const contributeToCampaign = async (program, wallet, campaignId, amount) => {
   try {
+    if (!program || !wallet.publicKey) {
+      throw new Error('Program or wallet not available');
+    }
+
+    const campaignPubkey = new PublicKey(campaignId);
+    const amountLamports = new anchor.BN(amount * LAMPORTS_PER_SOL);
+
     // Make contribution using the program interface
     const tx = await program.methods
-      .contribute(new anchor.BN(amount * LAMPORTS_PER_SOL))
+      .contribute(amountLamports)
+      .accounts({
+        campaign: campaignPubkey,
+        contributor: wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
       .rpc();
-
-    // DEMO MODE: Update campaign in local storage for demo
-    if (DEMO_CAMPAIGNS.has(campaignId)) {
-      const campaign = DEMO_CAMPAIGNS.get(campaignId);
-      campaign.amountRaised += parseFloat(amount);
-      campaign.contributions.push({
-        contributor: wallet.publicKey.toString(),
-        amount: parseFloat(amount),
-        timestamp: new Date()
-      });
-      DEMO_CAMPAIGNS.set(campaignId, campaign);
-
-      // Record transaction in history
-      recordTransaction(wallet.publicKey, 'contribution', {
-        campaignId,
-        campaignName: campaign.title,
-        amount: parseFloat(amount),
-        fee: Math.min(parseFloat(amount), 0.05)
-      }, tx);
-    }
 
     return {
       success: true,
@@ -158,7 +96,7 @@ export const contributeToCampaign = async (program, wallet, campaignId, amount) 
     console.error('Error contributing to campaign:', error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'Failed to contribute',
     };
   }
 };
@@ -166,30 +104,32 @@ export const contributeToCampaign = async (program, wallet, campaignId, amount) 
 /**
  * Withdraw funds from a campaign
  * @param {Object} program - Anchor program instance
- * @param {Object} wallet - Connected wallet
- * @param {string} campaignId - Campaign ID (public key)
+ * @param {Object} wallet - Connected wallet with publicKey
+ * @param {string} campaignId - Campaign PDA (public key)
  */
 export const withdrawFunds = async (program, wallet, campaignId) => {
   try {
+    if (!program || !wallet.publicKey) {
+      throw new Error('Program or wallet not available');
+    }
+
+    // Find campaign PDA to verify it belongs to the creator
+    const { campaignPDA } = await findCampaignPDA(wallet.publicKey);
+    
+    // Verify the campaign ID matches
+    if (campaignPDA.toString() !== campaignId) {
+      throw new Error('Campaign does not belong to this creator');
+    }
+
     // Withdraw funds using the program interface
     const tx = await program.methods
       .withdrawFunds()
+      .accounts({
+        campaign: campaignPDA,
+        creator: wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
       .rpc();
-
-    // DEMO MODE: Update campaign in local storage for demo
-    if (DEMO_CAMPAIGNS.has(campaignId)) {
-      const campaign = DEMO_CAMPAIGNS.get(campaignId);
-      campaign.isActive = false;
-      DEMO_CAMPAIGNS.set(campaignId, campaign);
-
-      // Record transaction in history
-      recordTransaction(wallet.publicKey, 'withdrawal', {
-        campaignId,
-        campaignName: campaign.title,
-        amountRaised: campaign.amountRaised,
-        fee: 0.005
-      }, tx);
-    }
 
     return {
       success: true,
@@ -199,7 +139,7 @@ export const withdrawFunds = async (program, wallet, campaignId) => {
     console.error('Error withdrawing funds:', error);
     return {
       success: false,
-      error: error.message,
+      error: error.message || 'Failed to withdraw funds',
     };
   }
 };
@@ -207,31 +147,31 @@ export const withdrawFunds = async (program, wallet, campaignId) => {
 /**
  * Fetch a specific campaign
  * @param {Object} program - Anchor program instance
- * @param {string} campaignId - Campaign ID (public key)
+ * @param {string} campaignId - Campaign PDA (public key)
  * @param {PublicKey} walletPublicKey - Connected wallet public key
  */
 export const fetchCampaign = async (program, campaignId, walletPublicKey) => {
   try {
-    // DEMO MODE: Return from local storage if available
-    if (DEMO_CAMPAIGNS.has(campaignId)) {
-      const campaign = DEMO_CAMPAIGNS.get(campaignId);
-      return {
-        ...campaign,
-        isCreator: campaign.creator === walletPublicKey.toString()
-      };
+    if (!program) {
+      throw new Error('Program not available');
     }
 
-    // Create a dummy campaign if not found
+    const campaignPubkey = new PublicKey(campaignId);
+
+    // Fetch the campaign account from the blockchain
+    const campaignAccount = await program.account.campaign.fetch(campaignPubkey);
+
+    // Format campaign data for UI
     return {
-      publicKey: new PublicKey(campaignId),
-      creator: walletPublicKey.toString(),
-      title: "Demo Campaign",
-      description: "This is a demo campaign for testing purposes.",
-      goalAmount: 10,
-      amountRaised: 2,
-      deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      isActive: true,
-      isCreator: true
+      publicKey: campaignPubkey,
+      creator: campaignAccount.creator.toString(),
+      title: campaignAccount.title,
+      description: campaignAccount.description,
+      goalAmount: campaignAccount.goalAmount.toNumber() / LAMPORTS_PER_SOL,
+      amountRaised: campaignAccount.amountRaised.toNumber() / LAMPORTS_PER_SOL,
+      deadline: new Date(campaignAccount.deadline.toNumber() * 1000),
+      isActive: campaignAccount.isActive,
+      isCreator: campaignAccount.creator.toString() === walletPublicKey?.toString()
     };
   } catch (error) {
     console.error('Error fetching campaign:', error);
@@ -246,60 +186,29 @@ export const fetchCampaign = async (program, campaignId, walletPublicKey) => {
  */
 export const fetchAllCampaigns = async (program, walletPublicKey) => {
   try {
-    // DEMO MODE: Return from local storage for demo
-    const campaigns = Array.from(DEMO_CAMPAIGNS.values());
-
-    // If no campaigns yet, create sample campaigns
-    if (campaigns.length === 0) {
-      const sampleCampaigns = [
-        {
-          name: "Educational Support Fund",
-          description: "Help fund educational resources for underprivileged schools.",
-          goalAmount: 15,
-          duration: "30"
-        },
-        {
-          name: "Community Garden Project",
-          description: "Support our local community garden initiative.",
-          goalAmount: 5,
-          duration: "14"
-        },
-        {
-          name: "Tech Startup Accelerator",
-          description: "Fund the next generation of tech entrepreneurs.",
-          goalAmount: 25,
-          duration: "60"
-        }
-      ];
-
-      // Create demo campaigns
-      for (const campaignData of sampleCampaigns) {
-        const now = new Date();
-        const deadline = new Date(now);
-        deadline.setDate(now.getDate() + parseInt(campaignData.duration));
-
-        // Create a valid demo creator wallet
-        const demoCreator = { publicKey: Keypair.generate().publicKey };
-
-        const { campaignId, campaign } = createDemoCampaign(
-          demoCreator,
-          campaignData,
-          deadline
-        );
-
-        // Add some random progress
-        campaign.amountRaised = Math.random() * (campaignData.goalAmount * 0.75);
-      }
+    if (!program) {
+      return [];
     }
 
-    // Get updated campaigns
-    const updatedCampaigns = Array.from(DEMO_CAMPAIGNS.values());
+    // Fetch all campaign accounts from the blockchain
+    const campaignAccounts = await program.account.campaign.all();
 
-    // Format for UI with isCreator flag
-    return updatedCampaigns.map(campaign => ({
-      ...campaign,
-      isCreator: campaign.creator === walletPublicKey?.toString()
-    }));
+    // Format campaign data for UI
+    const campaigns = campaignAccounts.map((account) => {
+      return {
+        publicKey: account.publicKey,
+        creator: account.account.creator.toString(),
+        title: account.account.title,
+        description: account.account.description,
+        goalAmount: account.account.goalAmount.toNumber() / LAMPORTS_PER_SOL,
+        amountRaised: account.account.amountRaised.toNumber() / LAMPORTS_PER_SOL,
+        deadline: new Date(account.account.deadline.toNumber() * 1000),
+        isActive: account.account.isActive,
+        isCreator: account.account.creator.toString() === walletPublicKey?.toString()
+      };
+    });
+
+    return campaigns;
   } catch (error) {
     console.error('Error fetching all campaigns:', error);
     return [];
@@ -313,8 +222,13 @@ export const fetchAllCampaigns = async (program, walletPublicKey) => {
  */
 export const fetchUserCampaigns = async (program, walletPublicKey) => {
   try {
-    // DEMO MODE: Filter campaigns created by current user
-    const allCampaigns = Array.from(DEMO_CAMPAIGNS.values());
+    if (!program || !walletPublicKey) {
+      return [];
+    }
+
+    // Fetch all campaigns and filter by creator
+    const allCampaigns = await fetchAllCampaigns(program, walletPublicKey);
+    
     return allCampaigns.filter(
       campaign => campaign.creator === walletPublicKey.toString()
     );

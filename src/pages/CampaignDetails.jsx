@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Clock, Users, Target, AlertCircle } from 'lucide-react';
+import { Clock, ArrowLeft, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useProgram } from '../contexts/ProgramContext';
 import {
   fetchCampaign,
   contributeToCampaign,
   withdrawFunds
 } from '../utils/programHelpers';
+import { Button } from '../components/ui/button';
+import { motion } from 'framer-motion';
 
 const CampaignDetails = () => {
   const { id } = useParams();
@@ -20,21 +20,29 @@ const CampaignDetails = () => {
 
   const [campaign, setCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [contributionAmount, setContributionAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  // Fetch campaign data
   useEffect(() => {
     const loadCampaign = async () => {
+      setLoading(true);
+      setError(null);
       try {
+        if (!program) {
+          setError('Program not initialized. Please ensure your wallet is connected and the program is deployed.');
+          setLoading(false);
+          return;
+        }
+
         if (connected && program && publicKey) {
           const campaignData = await fetchCampaign(program, id, publicKey);
           setCampaign(campaignData);
         }
       } catch (error) {
         console.error('Error loading campaign:', error);
-        toast.error('Failed to load campaign details');
+        setError(error.message || 'Failed to load campaign details. Make sure the program is deployed.');
       } finally {
         setLoading(false);
       }
@@ -42,10 +50,11 @@ const CampaignDetails = () => {
 
     if (connected && program && publicKey) {
       loadCampaign();
+    } else if (!connected) {
+      setLoading(false);
     }
   }, [id, connected, program, publicKey]);
 
-  // Handle contribution
   const handleContribute = async (e) => {
     e.preventDefault();
 
@@ -74,7 +83,6 @@ const CampaignDetails = () => {
         toast.success('Contribution successful!', { id: toastId });
         setContributionAmount('');
 
-        // Refresh campaign data after contribution
         const updatedCampaign = await fetchCampaign(program, id, publicKey);
         setCampaign(updatedCampaign);
       } else {
@@ -88,7 +96,6 @@ const CampaignDetails = () => {
     }
   };
 
-  // Handle fund withdrawal
   const handleWithdraw = async () => {
     if (!connected) {
       toast.error('Please connect your wallet first');
@@ -112,8 +119,6 @@ const CampaignDetails = () => {
 
       if (result.success) {
         toast.success('Funds withdrawn successfully!', { id: toastId });
-
-        // Refresh campaign data after withdrawal
         const updatedCampaign = await fetchCampaign(program, id, publicKey);
         setCampaign(updatedCampaign);
       } else {
@@ -127,54 +132,50 @@ const CampaignDetails = () => {
     }
   };
 
-  // Format deadline to readable date
-  const formatDate = (date) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  // Calculate days remaining
   const getDaysRemaining = (deadline) => {
     if (!deadline) return 0;
     const now = new Date();
     const deadlineDate = new Date(deadline);
     const diff = deadlineDate - now;
-    const daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-    return daysRemaining;
-  };
-
-  // Calculate progress percentage
-  const getProgressPercentage = () => {
-    if (!campaign) return 0;
-    const percentage = (campaign.amountRaised / campaign.goalAmount) * 100;
-    return Math.min(100, percentage);
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-[70vh]">
-        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-[#000000] dark:via-[#0a0e27] dark:to-[#000000] flex justify-center items-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-black dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-white/60">Loading campaign...</p>
+        </div>
       </div>
     );
   }
 
-  if (!campaign) {
+  if (error || !campaign) {
     return (
-      <div className="max-w-4xl mx-auto p-6 text-center">
-        <div className="p-8 bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-800/50">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-3">Campaign Not Found</h2>
-          <p className="text-gray-400 mb-6">The campaign you're looking for doesn't exist or has been removed.</p>
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-[#000000] dark:via-[#0a0e27] dark:to-[#000000] p-8">
+        <div className="max-w-4xl mx-auto">
           <button
-            onClick={() => navigate('/discover')}
-            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl text-white font-medium"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 dark:text-white/60 hover:text-black dark:hover:text-white mb-8 transition-colors"
           >
-            Discover Campaigns
+            <ArrowLeft className="w-4 h-4" />
+            Back
           </button>
+          <div className="glass-card rounded-2xl p-12 text-center">
+            <AlertCircle className="w-16 h-16 text-black dark:text-white mx-auto mb-6 opacity-50" />
+            <h2 className="text-2xl font-bold text-black dark:text-white mb-3">Campaign Not Found</h2>
+            <p className="text-gray-600 dark:text-white/60 mb-6">{error || 'The campaign you\'re looking for doesn\'t exist.'}</p>
+            {error && (
+              <p className="text-gray-600 dark:text-white/60 mb-6 text-sm">Make sure the program is deployed: <code className="font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded">2YmiPygdaL7MfnB4otFDchBFd2gdEQnNeeYd4LueJFvu</code></p>
+            )}
+            <Button
+              onClick={() => navigate('/discover')}
+              className="bg-black dark:bg-white text-white dark:text-black rounded-xl"
+            >
+              Discover Campaigns
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -182,184 +183,165 @@ const CampaignDetails = () => {
 
   const daysRemaining = getDaysRemaining(campaign.deadline);
   const isActive = campaign.isActive;
-  const hasEnded = daysRemaining === 0 || !isActive;
-  const progressPercentage = getProgressPercentage();
+  const progressPercentage = Math.min(100, (campaign.amountRaised / campaign.goalAmount) * 100);
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-[#000000] dark:via-[#0a0e27] dark:to-[#000000] p-8">
+      <div className="max-w-6xl mx-auto">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-400 hover:text-white mb-4 flex items-center gap-1"
+          className="flex items-center gap-2 text-gray-600 dark:text-white/60 hover:text-black dark:hover:text-white mb-8 transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
+          <ArrowLeft className="w-4 h-4" />
           Back
         </button>
-        <h1 className="text-3xl font-bold text-white mb-2">{campaign.title}</h1>
-        <div className="flex items-center gap-4 text-gray-400 text-sm">
-          <span>By {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Campaign image and details */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Campaign Image */}
-          {campaign.imageUrl && (
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50">
-              <img
-                src={campaign.imageUrl}
-                alt={campaign.title}
-                className="w-full h-64 object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://placehold.co/600x400?text=Image+Not+Available';
-                }}
-              />
-            </div>
-          )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-10"
+        >
+          <h1 className="text-5xl font-bold mb-4 text-black dark:text-white">{campaign.title}</h1>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-gray-600 dark:text-white/60 font-mono">By {campaign.creator.slice(0, 6)}...{campaign.creator.slice(-4)}</span>
+            <span className={`px-4 py-2 rounded-full text-xs font-semibold ${
+              isActive
+                ? 'bg-black/10 dark:bg-white/10 text-black dark:text-white border border-black/20 dark:border-white/20'
+                : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800'
+            }`}>
+              {isActive ? 'Active' : 'Ended'}
+            </span>
+          </div>
+        </motion.div>
 
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-            <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
-              About This Campaign
-            </h2>
-            <p className="text-gray-300 whitespace-pre-line">{campaign.description}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="glass-card rounded-2xl p-8"
+            >
+              <h2 className="text-2xl font-bold text-black dark:text-white mb-6">
+                About This Campaign
+              </h2>
+              <p className="text-gray-600 dark:text-white/60 whitespace-pre-line leading-relaxed text-lg">
+                {campaign.description}
+              </p>
+            </motion.div>
           </div>
 
-          {/* Status badge */}
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-            <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
-              Campaign Status
-            </h2>
-            <div className="flex flex-wrap gap-4">
-              <div className={`px-4 py-2 rounded-xl text-sm font-medium ${isActive
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                {isActive ? 'Active' : 'Ended'}
-              </div>
-
-              {hasEnded ? (
-                <div className="px-4 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/30">
-                  Campaign Ended
-                </div>
-              ) : (
-                <div className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                  {daysRemaining} days remaining
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right column - Funding status and contribution */}
-        <div className="space-y-6">
-          <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-1">
-                  <span className="text-gray-400">Progress</span>
-                  <span className="text-gray-400">{progressPercentage.toFixed(1)}%</span>
-                </div>
-                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                    style={{ width: `${progressPercentage}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="flex justify-between">
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="glass-card rounded-2xl p-8"
+            >
+              <div className="space-y-6">
                 <div>
-                  <p className="text-2xl font-bold text-white">{campaign.amountRaised.toFixed(2)} SOL</p>
-                  <p className="text-gray-400 text-sm">of {campaign.goalAmount.toFixed(2)} SOL goal</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4 text-purple-500" />
-                    <p className="text-gray-400 text-sm">{daysRemaining} days left</p>
+                  <div className="flex justify-between mb-3 text-sm">
+                    <span className="text-gray-600 dark:text-white/60 font-medium">Progress</span>
+                    <span className="text-black dark:text-white font-bold">{progressPercentage.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full h-3 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressPercentage}%` }}
+                      transition={{ duration: 1 }}
+                      className="h-full bg-black dark:bg-white rounded-full"
+                    />
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Contribute form */}
-          {isActive && (
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-              <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
-                Support this campaign
-              </h2>
-              {connected ? (
-                <form onSubmit={handleContribute} className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 mb-2">Contribution Amount (SOL)</label>
-                    <div className="flex">
+                <div>
+                  <p className="text-3xl font-bold text-black dark:text-white mb-2">
+                    {campaign.amountRaised.toFixed(2)} SOL
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-white/60">
+                    of {campaign.goalAmount.toFixed(2)} SOL goal
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-white/60">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-medium">{daysRemaining} days left</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {isActive && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="glass-card rounded-2xl p-8"
+              >
+                <h2 className="text-xl font-bold text-black dark:text-white mb-6">
+                  Support this campaign
+                </h2>
+                {connected ? (
+                  <form onSubmit={handleContribute} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-black dark:text-white mb-3 uppercase tracking-wide">
+                        Amount (SOL)
+                      </label>
                       <input
                         type="number"
                         value={contributionAmount}
                         onChange={(e) => setContributionAmount(e.target.value)}
-                        placeholder="e.g. 0.5"
+                        placeholder="0.0"
                         step="0.01"
                         min="0.01"
-                        className="w-full p-3 bg-gray-800/50 border border-gray-700 rounded-l-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="glass w-full px-5 py-4 rounded-xl text-black dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all text-lg"
                         required
                       />
-                      <div className="p-3 bg-gray-800 border border-l-0 border-gray-700 rounded-r-xl text-gray-400">
-                        SOL
-                      </div>
                     </div>
-                  </div>
 
-                  <motion.button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`w-full py-3 rounded-xl text-white ${isSubmitting
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
-                      } transition-colors`}
-                    whileHover={!isSubmitting ? { scale: 1.02 } : {}}
-                    whileTap={!isSubmitting ? { scale: 0.98 } : {}}
-                  >
-                    {isSubmitting ? 'Processing...' : 'Contribute Now'}
-                  </motion.button>
-                </form>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-400 mb-4">Connect your wallet to contribute to this campaign</p>
-                </div>
-              )}
-            </div>
-          )}
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-900 dark:hover:bg-gray-100 rounded-xl py-6 text-lg font-semibold shadow-xl"
+                    >
+                      {isSubmitting ? 'Processing...' : 'Contribute'}
+                    </Button>
+                  </form>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-white/60 text-center py-4">
+                    Connect your wallet to contribute
+                  </p>
+                )}
+              </motion.div>
+            )}
 
-          {/* Withdraw funds button for campaign creator */}
-          {campaign.isCreator && isActive && (
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-800/50">
-              <h2 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 mb-4">
-                Creator Actions
-              </h2>
-              <motion.button
-                onClick={handleWithdraw}
-                disabled={isWithdrawing}
-                className={`w-full py-3 rounded-xl text-white ${isWithdrawing
-                  ? 'bg-gray-600 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
-                  } transition-colors`}
-                whileHover={!isWithdrawing ? { scale: 1.02 } : {}}
-                whileTap={!isWithdrawing ? { scale: 0.98 } : {}}
+            {campaign.isCreator && isActive && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="glass-card rounded-2xl p-8"
               >
-                {isWithdrawing ? 'Processing...' : 'Withdraw Funds'}
-              </motion.button>
-              <p className="text-gray-400 text-sm mt-2">
-                You can withdraw funds if the campaign has met its goal or has ended.
-              </p>
-            </div>
-          )}
+                <h2 className="text-xl font-bold text-black dark:text-white mb-6">
+                  Creator Actions
+                </h2>
+                <Button
+                  onClick={handleWithdraw}
+                  disabled={isWithdrawing}
+                  variant="outline"
+                  className="w-full rounded-xl border-2 border-black dark:border-white py-6"
+                >
+                  {isWithdrawing ? 'Processing...' : 'Withdraw Funds'}
+                </Button>
+                <p className="text-xs text-gray-600 dark:text-white/60 mt-4">
+                  You can withdraw funds if the campaign has met its goal or has ended.
+                </p>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default CampaignDetails; 
+export default CampaignDetails;
